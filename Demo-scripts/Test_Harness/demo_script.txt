@@ -1,0 +1,96 @@
+**Create a new OSD cluster
+**Install the target Operator(starburst) using openshift console
+
+
+
+oc get subs -n openshift-operators -o yaml
+starburst-enterprise-helm-operator-certified-rhmp
+
+oc get csv|grep star
+starburst-enterprise-helm-operator.v360.6.1
+
+
+#Export environment parameters
+export DEMO_HOME=/tmp/starburst
+
+#Create a home directory for demo
+mkdir ${DEMO_HOME}
+cd ${DEMO_HOME}
+
+
+#Create ods-ci stable base image**
+git clone --branch stable_isv  git@github.com:Jooho/ods-ci.git
+cd ods-ci
+podman build -t quay.io/jooholee/ods-ci:stable -f build/Dockerfile .
+podman push p build -t quay.io/jooholee/ods-ci:stable -f build/Dockerfile .
+
+
+#Download isv-cli**
+wget https://github.com/Jooho/isv-cli/releases/download/v0.4/isv-cli
+chmod 777 ./isv-cli
+./isv-cli --version
+
+#Download test harness config.ini file**
+curl -L https://raw.githubusercontent.com/Jooho/isv-cli/main/templates/test-harness/example-config.ini -o ${DEMO_HOME}/config.ini
+vi ${DEMO_HOME}/config.ini
+
+..
+PRODUCT_NAME=starburst
+OPERATOR_CRD_API=starbursthives.charts.starburstdata.com
+..
+..
+JUPYTER_NOTEBOOK_PATH=
+JUPYTER_NOTEBOOK_FILE=
+..
+
+./isv-cli test-harness create --config-path=${DEMO_HOME}/config.ini --dest-dir=${DEMO_HOME}/test-harness-repos 
+
+
+** Deploy ODH
+cd ${DEMO_HOME}/test-harness-repos/starburst-operator-test-harness
+make odh-deploy
+
+** Update ISV Operator manifests
+- Update ./hack/starburst-operator objects
+- Update Makefile "isv-operator-deploy"
+- Update Makefile "isv-operator-clean"
+
+cd ./hack/starburst-operator
+rm cs.yaml
+rm og.sh
+vi subs.yaml
+vi cr.yaml
+cd ../../
+vi Makefile
+
+# Uninstall starburst operator
+make isv-operator-deploy
+
+
+** Manifest development **
+The default source have 100% successful test scripts so you can test it first
+
+cd ${DEMO_HOME}/test-harness-repos/starburst-operator-manifests 
+make build
+make run        # Make sure all tests succeed
+
+[manifests-test]
+- Update basictests/operator.sh
+- Copy notebook if you have a test jupyter notebook under notebooks or delete the files under the folders
+
+make image  # Make sure that the manifests image is public.    
+
+
+
+** Operator Test Harness Development **
+cd ${DEMO_HOME}/test-harness-repos/starburst-operator-test-harness
+make job-test                # Check the job pod log and see if it successfully tests operator or not
+make job-test-clean          # If it tests well, clean job-test objects
+make image                   # Make sure that the test harness image is public.    
+
+
+make cluster-test                # Check the job pod log and see if it successfully tests operator or not
+make cluster-test-clean          # If it tests well, clean cluster-test objects
+
+
+

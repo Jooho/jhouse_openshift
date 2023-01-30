@@ -1,0 +1,35 @@
+// protos/v1/user/user.proto
+syntax = "proto3";
+
+package v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
+
+option go_package = "github.com/Jooho/integration-framework-grpc-server/pkg/api/v1";
+
+service User {
+  rpc GetUser(GetUserRequest) returns (GetUserResponse);
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
+}
+
+message UserMessage {
+  string user_id = 1;
+  string name = 2;
+  string phone_number = 3;
+  int32 age = 4;
+  // optional k8s.io.api.core.v1.ConfigMap cm = 5;
+  // optional k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta cm = 7;
+
+  google.protobuf.Timestamp ttt = 6;
+  optional google.protobuf.Any bbb = 7;
+  optional string ccc = 8;
+}
+
+message GetUserRequest { string user_id = 1; }
+
+message GetUserResponse { UserMessage user_message = 1; }
+
+message ListUsersRequest {}
+
+message ListUsersResponse { repeated UserMessage user_messages = 1; }

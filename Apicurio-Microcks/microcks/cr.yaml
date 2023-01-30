@@ -1,0 +1,20 @@
+apiVersion: microcks.github.io/v1alpha1
+kind: MicrocksInstall
+metadata:
+  name: microks
+spec:
+  name: microks
+  version: 1.5.2
+  microcks:
+    replicas: 1
+  postman:
+    replicas: 1
+  keycloak:
+    install: true
+    persistent: true
+    volumeSize: 1Gi
+    storage_class_name: ${STORAGE_CLASS_NAME}
+  mongodb:
+    install: true
+    persistent: true
+    volumeSize: 2Gi

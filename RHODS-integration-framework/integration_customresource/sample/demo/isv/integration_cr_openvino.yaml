@@ -1,0 +1,26 @@
+apiVersion: odh.redhat.com/v1alpha1
+kind: ODHIntegration
+metadata:
+  annotations:
+    integration.category: modelserving
+    integration.type: isv
+  name: openvino
+spec:
+  csvName: openvino-operator
+  globalEnv:
+  - SERVICE_ACCOUNT: sa
+  
+
+  # oneToOneMapping: 
+  #  - "spec.model_path": "%STORAGE_TYPE%://%BUCKET_NAME%/%MODEL_PATH%"
+  #  - "spec.aws_access_key_id": "%ACCESS_KEY_ID%"
+  #  - "spec.aws_region": "%REGION%"
+  #  - "spec.aws_secret_access_key": "%SECRET_ACCESS_KEY%"
+  #  - "spec.gcp_creds_secret_name": "%SECRET_NAME% "
+
+  # preprocessor:
+  # - oc:
+  #   - "create sa %SERVICE_ACCOUNT%"
+  #   - "secret link %SERVICE_ACCOUNT% %SECRET_NAME%"
+
+  # postprocessor:

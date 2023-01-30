@@ -1,0 +1,24 @@
+# Model 
+protocol
+implementation
+storage_path
+model_name
+model_path
+model_schema_path
+
+
+# Storage(s3)
+secret_name
+sa_name
+namespace
+endpoint_url
+storage_type  (s3/pvc)
+access_key_id   (azure: client_id)
+secret_access_key (azure: client_secret)
+bucket_name
+region  (azure:tenant-id)
+az_subscription_id
+
+
+# if secret_name is specified, a new secret will be created in the CR namespace.
+# 

@@ -1,0 +1,8 @@
+project_name: openshift-operators
+pachyderm_secret_name: pachyderm-ceph-secret
+version: latest
+storage_class: ""
+storage_pvc: ""  #If storage_class and storage_pvc are "", emptyDir will be used
+additionalParams:
+- bucket_name: ceph-bucket
+workspace_name: user-details

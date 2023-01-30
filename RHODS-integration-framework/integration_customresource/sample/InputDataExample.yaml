@@ -1,0 +1,46 @@
+# Model 
+protocol: v2
+implementation: sklearn
+model_name: jlee-test
+model_path: renet50-binary
+
+
+# Storage(S3 - AWS)
+secret_name: aws_secret
+namespace: test_project
+storage_type: s3
+access_key_id: secret_name.AWS_ACCESS_KEY_ID
+secret_access_key: secret_name.AWS_SECRET_ACCESS_KEY
+bucket_name: modelmesh-example-models
+region: us-east-2
+
+# Storage(S3 - AWS-secret)
+secret_name: aws_secret
+namespace: test_project
+storage_type: s3
+
+
+# Storage(S3 - MinIO)
+secret_name: minio_secret
+namespace: test_project
+endpoint_url: minio_secret.endpoint_url
+storage_type: s3
+access_key_id: secret_name.AWS_ACCESS_KEY_ID
+secret_access_key: secret_name.AWS_SECRET_ACCESS_KEY
+bucket_name: modelmesh-example-models
+region: us-east-2
+
+
+# Storage(S3 - MinIO - secret)
+secret_name: minio_secret
+namespace: test_project
+storage_type: s3
+
+##If secert exist, extract
+
+
+# Custom
+
+# Default
+#secret_name: %model_name%-secret
+#sa_name: %model_name%-sa

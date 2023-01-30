@@ -1,0 +1,23 @@
+apiVersion: odh.redhat.com/v1alpha1
+kind: ODHIntegration
+metadata:
+  annotations:
+    odh.integration.category: modelserving
+  name: odhintegration-template
+spec:
+  csvName: openvino-operator
+  addonName: managed-openvino #(optional default: "")
+  supportedVersionCsv: openvino-operator # seldon-deploy-operator #(optional default: %csvName%)
+  targetCsvVersion: 0.2.0  #(optional default: latest)
+  deletionLevel: 1 #( 1 = operator only, 2 = delete CRs,  3 = delete installed apps)
+
+
+  globalEnv:
+  - SERVICE_ACCOUNT: %MODEL_NAME%-sa
+  oneToOneMapping: 
+   - "spec.protocol": "%PROTOCOL%"
+  transformMapping:
+  - IMPLEMENTATION: 
+      SKLEARN_SERVER: sklearn
+      XGBoost: xgboost
+  

@@ -1,0 +1,6 @@
+AWS_ACCESS_KEY_ID=Access Key ID
+AWS_DEFAULT_BUCKET=Default Bucket
+AWS_DEFAULT_REGION=region
+AWS_S3_ENDPOINT=endpointurl
+AWS_SECRET_ACCESS_KEY=Secret Access Key
+type=s3

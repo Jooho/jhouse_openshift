@@ -1,0 +1,82 @@
+전제 조건
+* microcks가 keycloack을 설치한 상태(오퍼레이터를 이용)
+* microcksinstall CR 생성(storageclass: nfs)
+* Get user/password for keycloack
+  ~~~
+  echo "username:  $(oc get secret ${MICROCKS_CR_NAME}-keycloak-admin -ojsonpath='{.data.username}'|base64 -d)"
+  echo "password:  $(oc get secret ${MICROCKS_CR_NAME}-keycloak-admin -ojsonpath='{.data.password}'|base64 -d)"
+  username:  adminHTEoC
+  password:  ewPNWiasYtRKnAIDFGUXnFIkxKUoeBCz
+  ~~~
+
+
+#get token
+RESULT=`curl -k --data "username=admin&password=microcks123&grant_type=password&client_id=admin-cli" https://${MICROCKS_CR_NAME}-keycloak-${PROJECT_NAME}.${DOMAIN}/auth/realms/${APICURIO_KC_REALM}/protocol/openid-connect/token
+`
+TOKEN=`echo $RESULT | sed 's/.*access_token":"//g' | sed 's/".*//g'`
+#create client
+# curl -k -X POST -d "{ \"clientId\": \"apicurio-studio\", \"redirectUris\": [\"https:\/\/${APICURIO_URL}/*\"], \"secret\": \"${APICURIO_KC_CLIENT_SECRET}\", \"directAccessGrantsEnabled\":\"true\", \"webOrigins\": [\"+\"]  }"  -H "Content-Type:application/json" -H "Authorization: bearer ${TOKEN}"  https://${MICROCKS_CR_NAME}-keycloak-${PROJECT_NAME}.${DOMAIN}/auth/realms/${APICURIO_KC_REALM}/clients-registrations/default
+
+curl -k -X POST -d "{ \"clientId\": \"apicurio-studio\", \"redirectUris\": [\"https:\/\/${APICURIO_URL}/*\"], \"publicClient\": true, \"directAccessGrantsEnabled\":\"true\", \"webOrigins\": [\"+\"]  }"  -H "Content-Type:application/json" -H "Authorization: bearer ${TOKEN}"  https://${MICROCKS_CR_NAME}-keycloak-${PROJECT_NAME}.${DOMAIN}/auth/realms/${APICURIO_KC_REALM}/clients-registrations/default
+
+#create user
+curl -k -X POST -d "{ \"clientId\": \"apicurio-studio\", \"redirectUris\": [\"https:\/\/${APICURIO_URL}/*\"], \"secret\": \"${APICURIO_KC_CLIENT_SECRET}\", \"directAccessGrantsEnabled\":\"true\", \"webOrigins\": [\"+\"]  }"  -H "Content-Type:application/json" -H "Authorization: bearer ${TOKEN}"  https://${MICROCKS_CR_NAME}-keycloak-${PROJECT_NAME}.${DOMAIN}/auth/realms/${APICURIO_KC_REALM}/users
+
+
+
+import realm json 
+line 1080
+
+
+
+Update env.sh
+
+. env.sh
+
+
+
+create pvc.yaml
+~~~
+envsubst <pvc.yaml|oc create -f -
+~~~
+create configmap.yaml
+~~~
+envsubst <configmap.yaml|oc create -f -
+~~~
+
+create secret.yaml
+~~~
+envsubst < secrets.yaml|oc create -f -
+~~~
+
+create services.yaml
+~~~
+oc create -f services.yaml
+~~~
+
+expose routes
+~~~
+oc create route edge --service=apicurio-studio-ui --insecure-policy=Redirect
+oc create route edge --service=apicurio-studio-api --insecure-policy=Redirect
+oc create route edge --service=apicurio-studio-ws --insecure-policy=Redirect
+~~~
+
+create apicurio-studio-db-deployment
+~~~
+oc create -f apicurio-studio-db-deployment.yaml
+~~~
+
+create apicurio-studio-api-deployment
+~~~
+oc create -f apicurio-studio-api-deployment.yaml
+~~~
+
+create apicurio-studio-ws-deployment
+~~~
+oc create -f apicurio-studio-ws-deployment.yaml
+~~~
+
+create apicurio-studio-ui-deployment
+~~~
+oc create -f apicurio-studio-ui-deployment.yaml
+~~~

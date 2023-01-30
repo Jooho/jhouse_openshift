@@ -1,0 +1,2 @@
+type: ansible
+ansible_playbooks: ./ansible-playbooks

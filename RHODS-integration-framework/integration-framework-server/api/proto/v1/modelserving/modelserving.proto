@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package v1;
+
+option go_package = "github.com/Jooho/integration-framework-server/pkg/api/v1";
+
+service ModelServing {
+    rpc GetSubscribe(GetSubscribeRequest) returns (GetSubscribeResponse);
+}
+
+message Subscribe {
+    string category = 1;
+}
+
+message Application {
+    string name = 1;
+    bool opensource =2 ;
+    string csvName =3;
+    string version =4;
+    bool installed =5;
+    bool marketplaceImage = 6;
+    Support support = 7;
+    ODHIntegration integration= 8;
+    string example = 9;    
+}
+
+message Support {
+    bool isv =1;
+    bool redhat =2;
+}
+message ODHIntegration {
+    string install_doc_url =1;
+    string level =2;
+}
+
+
+message GetSubscribeRequest {
+    string category = 1;
+}
+
+message GetSubscribeResponse {
+    Subscribe subscribe = 1;
+}

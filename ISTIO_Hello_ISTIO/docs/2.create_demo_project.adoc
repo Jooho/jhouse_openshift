@@ -1,0 +1,18 @@
+Create Demo Project
+-------------------
+
+### Description ###
+
+Create a demo project and add privileged permission to the default/deployer on the demo project for ISTIO.
+
+
+### Script ###
+
+```
+./1.create-demo-project.sh
+```
+
+*Tip.*
+This whole demo script was developed for 2018 Toronto Convergence Event so project name is like following. However, you can override it.
+
+Next - link:./3.deploy_base_applications.adoc[Demo 1 - Deploy base applications]

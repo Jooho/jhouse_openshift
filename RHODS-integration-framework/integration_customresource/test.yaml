@@ -1,0 +1,9 @@
+apiVersion: odh.redhat.com/v1alpha1
+kind: ODHIntegration
+metadata:
+  name: odhintegration-seldoncore
+spec:
+  oneToOneMapping: 
+  - "spec.protocol": "%PROTOCOL%"
+  - "spec.predictors.[0].graph.modelUri": "%STORAGE_PATH%/%MODEL_PATH%"
+  - "implementation": "%IMPLEMENTATION%"

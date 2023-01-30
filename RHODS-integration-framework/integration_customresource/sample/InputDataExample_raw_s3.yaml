@@ -1,0 +1,21 @@
+# Model 
+protocol: v2
+implementation: sklearn
+model_name: jlee-test
+model_path: renet50-binary
+
+
+# Storage(s3)
+secret_name: s3_secret
+namespace: test_project
+storage_type: s3
+storage_access_key_id: XXXXX
+storage_secret_access_key: XXXX
+storage_bucket_name: test
+stroage_region: us-east-2
+
+# Custom
+
+# Default
+#secret_name: %model_name%-secret
+#sa_name: %model_name%-sa

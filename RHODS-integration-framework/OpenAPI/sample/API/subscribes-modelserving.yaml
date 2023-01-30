@@ -1,0 +1,59 @@
+---
+- category: modelserving
+  applications:
+  - name: openvino
+    opensource: true
+    csvName: openvino-operator
+    version: 0.2.0
+    installed: true   #if set false, it means it is subscriable and can be installed.
+    marketplaceImage: true
+    support:
+      isv: true    # if it uses marketplace image. set to false when it uses certifired or upstream operator
+      redhat: true # if it runs on openshift and certified/marketplace operator
+    installed: true
+    integration:
+      installation_doc_url: explore?selectId=openvino
+      installation_level: 2 #1: fully automation(not for production) 2: doc 3: blog
+    example:
+      - apiVersion: intel.com/v1alpha1
+        kind: ModelServer
+        metadata:
+          name: model-server-sample
+        spec:
+          annotations: {}
+          aws_access_key_id: ""
+          aws_region: ""
+          aws_secret_access_key: ""
+          batch_size: ""
+          config_configmap_name: ""
+          file_system_poll_wait_seconds: 0
+          gcp_creds_secret_name: ""
+          grpc_port: 8080
+          https_proxy: ""
+          image_name: registry.connect.redhat.com/intel/openvino-model-server@sha256:4ee88853cd8361e9d0a3461ad552f79c14f22406f1e32c8cbbb9341ae9780671
+          log_level: INFO
+          model_name: resnet
+          model_path: gs://ovms-public-eu/resnet50-binary
+          model_version_policy: '{\"latest\": { \"num_versions\":1 }}'
+          models_host_path: ""
+          models_volume_claim: ""
+          nireq: ""
+          plugin_config: '{\"CPU_THROUGHPUT_STREAMS\":\"1\"}'
+          replicas: 1
+          resources:
+            limits:
+              cpu: 4
+              memory: 250Mi
+          rest_port: 8081
+          s3_compat_api_endpoint: ""
+          security_context: {}
+          service_type: ClusterIP
+          shape: ""
+          target_device: CPU
+      - apiVersion: intel.com/v1alpha1
+        kind: Notebook
+        metadata:
+          name: openvino-notebook
+        spec: {}
+     
+
