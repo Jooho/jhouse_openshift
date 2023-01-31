@@ -1,0 +1,11 @@
+apiVersion: v1
+data:
+  environment.ts: |
+    export const environment = {
+      production: true,
+      nodeJsUrl: '%CHAT_SERVER_HOSTNAME%'
+    };
+kind: ConfigMap
+metadata:
+  name: chat-client-env
+

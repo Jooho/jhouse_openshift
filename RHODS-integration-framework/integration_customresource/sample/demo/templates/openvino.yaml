@@ -1,0 +1,80 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: ovms-template
+  annotations:
+    description: "Description"
+    iconClass: "icon-redis"
+    tags: "database,nosql"
+objects:
+- apiVersion: intel.com/v1alpha1
+  kind: ModelServer
+  metadata:
+    name: model-server-sample
+    namespace: test-if
+  spec:
+    deployment_parameters:
+      openshift_service_mesh: false
+      replicas: 1
+      resources:
+        limits:
+          xpu_device_quantity: '1'
+        requests:
+          xpu_device_quantity: '1'
+    image_name: >-
+      registry.connect.redhat.com/intel/openvino-model-server@sha256:f670aa3dc014b8786e554b8a3bb7e2e8475744d588e5e72d554660b74430a8c5
+    models_repository:
+      storage_type: ${type}
+      https_proxy: ''
+      http_proxy: ''
+      models_host_path: ''
+      models_volume_claim: ''
+      aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY}
+      aws_access_key_id: ${AWS_ACCESS_KEY_ID}
+      aws_region: ${AWS_DEFAULT_REGION}
+      s3_compat_api_endpoint: ''
+      gcp_creds_secret_name: ''
+      azure_storage_connection_string: ''
+    models_settings:
+      model_name: resnet
+      is_stateful: false
+      plugin_config: '{"CPU_THROUGHPUT_STREAMS":1}'
+      model_version_policy: '{"latest": { "num_versions":1 }}'
+      single_model_mode: true
+      idle_sequence_cleanup: false
+      low_latency_transformation: true
+      model_path: ${type}://${AWS_DEFAULT_BUCKET}/${MODEL_PATH}
+      config_configmap_name: ''
+      model_config: ''
+      nireq: 0
+      batch_size: ''
+      shape: ''
+      layout: ''
+      target_device: CPU
+      max_sequence_number: 0
+    server_settings:
+      file_system_poll_wait_seconds: 0
+      grpc_workers: 1
+      log_level: INFO
+      sequence_cleaner_poll_wait_minutes: 0
+      rest_workers: 0
+    service_parameters:
+      grpc_port: 8080
+      rest_port: 8081
+      service_type: ClusterIP
+
+parameters:
+- description: secret name for
+  name: type
+- description: secret name for
+  name: AWS_ACCESS_KEY_ID
+- description: secret name for
+  name: AWS_SECRET_ACCESS_KEY
+- description: secret name for
+  name: AWS_S3_ENDPOINT
+- description: secret name for
+  name: AWS_DEFAULT_REGION
+- description: secret name for
+  name: AWS_DEFAULT_BUCKET
+- description: secret name for
+  name: MODEL_PATH

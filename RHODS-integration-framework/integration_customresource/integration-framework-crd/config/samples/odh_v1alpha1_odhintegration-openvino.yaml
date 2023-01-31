@@ -1,0 +1,14 @@
+apiVersion: odh.redhat.com/v1alpha1
+kind: ODHIntegration
+metadata:
+  name: modelserving-openvino
+  labels:
+    integration: modelserving
+    provider: intel
+    app: openvino
+spec:
+  template: modelserving-ovms-template
+  provider: Intel
+  csvName: openvino-operator
+  minSupportedVersion: 0.2.0
+

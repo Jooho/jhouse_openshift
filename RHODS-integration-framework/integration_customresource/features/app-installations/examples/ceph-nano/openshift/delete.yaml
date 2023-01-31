@@ -1,0 +1,18 @@
+objects:
+- serviceaccount: 
+    name:
+    - ceph-nano
+- role:
+    name:
+    - ceph-nano-secrets
+- rolebinding:
+    name:
+    - ceph-nano-secrets
+- serviceaccount
+    name:
+    - ceph-nano
+    - ceph-nano-0
+- statefulset:
+    name:
+    - ceph-nano
+    

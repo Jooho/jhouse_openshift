@@ -1,0 +1,83 @@
+apiVersion: odh.redhat.com/v1alpha1
+kind: ODHIntegration
+metadata:
+  annotations:
+    odh.integration.category: modelserving
+  name: odhintegration-template
+spec:
+  csvName: openvino-operator
+  addonName: managed-openvino #(optional default: "")
+  supportedVersionCsv: openvino-operator # seldon-deploy-operator #(optional default: %csvName%)
+  targetCsvVersion: 0.2.0  #(optional default: latest)
+  deletionLevel: 1 #( 1 = operator only, 2 = delete CRs,  3 = delete installed apps)
+  
+
+  globalEnv:
+  - SERVICE_ACCOUNT: %MODEL_NAME%-sa
+  oneToOneMapping: 
+   - "spec.protocol": "%PROTOCOL%"
+  transformMapping:
+  - IMPLEMENTATION: 
+      SKLEARN_SERVER: sklearn
+      XGBoost: xgboost
+  
+  preprocessor:
+  - if_object_exist:
+      object: {secret: %SECRET%}
+        - oc:
+          - "export %AWS_ACCESS_KEY_ID%=$(oc get %SECRET% -ojsonpath=='{.data.AMAZON_BUCKET}'"
+  - if_object_not_exist:
+      object: { serviceaccount: "%SERVICE_ACCOUNT" }
+        - oc:
+          - "create sa %SERVICE_ACCOUNT%"
+      delete_process:
+        - oc:
+          - "delete sa %SERVICE_ACCOUNT%"
+
+  postprocessor:
+
+
+
+automation:
+  preprocessor:
+  - if_file_exist:
+      file: aikit.yaml       
+        - oc:
+          - "create cm aikit-cr --from-file=aikit.yaml"
+      delete_process:
+        - oc:
+          - "delete cm aikit-cr"
+  - appInstallations:
+    - name: pvc
+      preconfiguredApp: true  
+      variables:
+      - |
+        metadata.name: test
+        metadata.labels: 
+        - app: pvc
+        spec.accessModes: ReadWriteMany
+        spec.resources.storage: 1Mi
+        spec.storageClassName: gp2
+
+    - name: ceph-nano
+      preconfiguredApp: true  #(default - true)
+      version: 0.2.0  #(optional default-latest)
+      storage_class: gp2
+      additionalParams:
+      - bucketName: test-bucket
+
+  postprocessor:
+  - appInstallations:
+    - name: aikit
+      preconfiguredApp: true   #(default - true)
+      csvName: aikit-operator
+      csvVersion: 2022.1.30120  #(optional-latest)
+      additionalParams:
+        - cr:
+            configmapName: aikit-cr
+
+    - name: nfs-provisioner
+      preconfiguredApp: false
+      type: operator 
+      csvName: nfs-provisioner-operator
+      csvVersion: 2022.1.30120  #(optional-latest)

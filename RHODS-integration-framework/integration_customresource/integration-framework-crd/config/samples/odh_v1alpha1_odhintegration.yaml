@@ -1,0 +1,6 @@
+apiVersion: odh.redhat.com/v1alpha1
+kind: ODHIntegration
+metadata:
+  name: odhintegration-sample
+spec:
+  # TODO(user): Add fields here

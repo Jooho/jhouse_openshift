@@ -1,0 +1,16 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  labels:
+    app: cakephp-mysql-example
+    template: cakephp-mysql-example
+  name: cakephp-mysql-example
+spec:
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: edge
+  to:
+    kind: Service
+    name: cakephp-mysql-example
+    weight: 100
+  wildcardPolicy: None

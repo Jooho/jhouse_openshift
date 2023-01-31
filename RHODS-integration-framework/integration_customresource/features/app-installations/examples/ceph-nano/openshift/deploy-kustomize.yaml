@@ -1,0 +1,25 @@
+type: kustomize
+- kustomizeConfig:
+    repoRef:
+      name: manifests
+      path: ceph/object-storage/scc
+  name: ceph-nano-scc
+- kustomizeConfig:
+    repoRef:
+      name: manifests
+      path: ceph/object-storage/nano
+  repos:
+  - name: manifests
+    uri: https://github.com/opendatahub-io/odh-manifests/tarball/master
+
+preprocessor:
+  oc:
+  - create -f ./templates/pvc.ymal
+
+
+
+
+  # Watch features
+  # - preprocessor each item can have verification list and it will wait until the verification is met.(timeout 30 times)
+  #   - verfication list must be provided by contributor
+  #   - by default, it believes contributor commands.  

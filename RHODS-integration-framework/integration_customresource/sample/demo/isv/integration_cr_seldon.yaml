@@ -1,0 +1,33 @@
+apiVersion: odh.redhat.com/v1alpha1
+kind: ODHIntegration
+metadata:
+  annotations:
+    integration.category: modelserving
+    integration.type: isv
+  name: seldoncore
+spec:
+  csvName: seldon-operator
+  supportedVersionCsv: seldon-deploy-operator
+  
+  oneToOneMapping: 
+   - "spec.protocol": "%PROTOCOL%"
+   - "spec.predictors.[0].graph.modelUri": "%STORAGE_TYPE%://%BUCKET_NAME%/%MODEL_PATH%"
+   - "spec.predictors.[0].graph.implementation": "%IMPLEMENTATION%"
+   - "spec.predictors.[0].graph.name": "%MODEL_NAME%"
+   - "spec.predictors.[0].graph.serviceAccountName": "%SERVICE_ACCOUNT%"
+  transformMapping:
+  - IMPLEMENTATION: 
+      SKLEARN_SERVER: "SKLEARN_SERVER"
+      XGBoost: "XGBoost"
+      TRITON_SERVER: "TRITON_SERVER"  # TRITON_SERVER is not in client IMPLEMENT, so it can not be set. Customized parameters are needed for it.
+      TENSORFLOW: "TENSORFLOW"
+      MLFLOW_SERVER: ""
+      HUGGINGFACE_SERVER: ""
+      
+ customizedParameters:
+ - IMPLEMENTATION:
+      - "TRITON_SERVER"
+
+
+
+

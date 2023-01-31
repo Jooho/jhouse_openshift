@@ -1,0 +1,37 @@
+- category: modelserving
+  applications:
+    - name: openvino
+      opensource: true
+      csvName: openvino-operator
+      version: 0.2.0
+      installed: true   #if set false, it means it is subscriable and can be installed.
+        marketplaceImage: true
+      support:
+        isv: true    # if it uses marketplace image. set to false when it uses certifired or upstream operator
+        redhat: true # if it runs on openshift and certified/marketplace operator
+      installed: true
+      integration:
+        installation_doc_url: explore?selectId=openvino
+        installation_level: 2 #1: fully automation(not for production) 2: doc 3: blog
+      logo: xxx
+      example: xxx
+
+
+#
+#Operator check flow:
+#- csv_name exist -> supportedVersionCsv 
+
+#Support check flow:
+#- supportedVersionCsv (when csv_name != supportedVersionCsv)
+#- bundle name
+
+
+#spec:
+#  channel: alpha
+#  installPlanApproval: Automatic
+#  name: nfs-provisioner-operator
+#  source: community-operators
+
+#spec.source ==> community-operators/redhat-marketplace/#certified-operators    ADDOn should be different name from the list.
+
+#oc get subs -o json |jq -r '.items[]| select(.spec.name| test("nfs-")).spec.name'

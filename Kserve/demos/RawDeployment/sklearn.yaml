@@ -1,0 +1,16 @@
+apiVersion: "serving.kserve.io/v1beta1"
+kind: "InferenceService"
+metadata:
+  annotations:
+     #https://github.com/kserve/kserve/blob/master/pkg/constants/constants.go
+    # "serving.kserve.io/autoscalerClass": "hpa"
+    # "serving.kserve.io/metrics": "cpu"
+    "serving.kserve.io/deploymentMode": "RawDeployment"
+  name: "sklearn-irisv2"
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: sklearn
+      runtime: kserve-mlserver
+      storageUri: "gs://seldon-models/sklearn/mms/lr_model"

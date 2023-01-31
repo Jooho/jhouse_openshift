@@ -1,0 +1,35 @@
+apiVersion: odh.redhat.com/v1alpha1
+kind: ODHIntegration
+metadata:
+  annotations:
+    integration.category: odh
+    integration.type: client
+    default.client.integration: "true"
+  name: odh-client-integration
+spec:
+  oneToOneMapping: 
+   - STORAGE_TYPE: type
+   - PROTOCOL: protocol
+   - IMPLEMENTATION: modelType
+   - MODEL_NAME: modelName
+   - MODEL_PATH: modelPath
+   - ENDPOINT_URL: "%secret_name%.data.AWS_S3_ENDPOINT"
+   - SA_NAME: sa_name
+   - SECRET_NAME: secret_name
+   - NAMESPACE: namespace
+   - ACCESS_KEY_ID: "%secret_name%.data.AWS_SECRET_ACCESS_KEY"
+   - SECRET_ACCESS_KEY: "%secret_name%.data.AWS_ACCESS_KEY_ID"
+   - BUCKET_NAME: default_bucket
+   - REGION: region
+# Not supported   
+   #- AZ_SUBSCRIPTION_ID:
+  transformMapping:
+  - IMPLEMENTATION: 
+      SKLEARN_SERVER: sklearn
+      XGBoost: xgboost
+      LightGBM: lightgbm
+      Keras: keras
+      ONNX: onnx
+      PYTORCH: pytorch
+      TENSORFLOW: tensorflow
+      TENSORRT: tensorrt

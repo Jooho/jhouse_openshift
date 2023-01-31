@@ -1,0 +1,31 @@
+- name: Pre-requisites Processes
+  hosts: localhost
+  become: yes
+  become_user: root
+  gather_facts: no
+  vars:
+   - required_packages:
+     - dnf-plugins-core
+     - podman
+     - httpd
+<<<<<<< HEAD
+
+#  tasks:
+#    - name: Install required packages
+#      yum:
+#        name: "{{ required_packages }}"
+#        state: present
+#        enablerepo: https://download.docker.com/linux/fedora/docker-ce.repo
+
+=======
+  tasks:
+#    - name: Install cri-o (Since Fedora 30, the install way is changed)
+#      shell: "VERSION=1.14; dnf module enable -y cri-o:$VERSION;  dnf install -y cri-o"
+#      become: yes
+
+    - name: Install required packages
+      yum:
+        name: "{{ required_packages }}"
+        state: present
+      become: yes
+>>>>>>> 912361964e24642bd99be26e956e5bb799cf429e

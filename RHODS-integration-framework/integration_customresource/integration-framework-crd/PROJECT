@@ -1,0 +1,18 @@
+domain: redhat.com
+layout:
+- go.kubebuilder.io/v3
+plugins:
+  manifests.sdk.operatorframework.io/v2: {}
+  scorecard.sdk.operatorframework.io/v2: {}
+projectName: crd
+repo: github.com/jooho/integration-framework
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: redhat.com
+  group: odh
+  kind: ODHIntegration
+  path: github.com/jooho/integration-framework/api/v1alpha1
+  version: v1alpha1
+version: "3"

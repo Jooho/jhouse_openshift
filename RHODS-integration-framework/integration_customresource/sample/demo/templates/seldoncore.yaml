@@ -1,0 +1,59 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  name: seldoncore-template
+  annotations:
+    description: "Description"
+    iconClass: "icon-redis"
+    tags: "database,nosql"
+objects:
+- apiVersion: machinelearning.seldon.io/v1alpha2
+  kind: SeldonDeployment
+  metadata:
+    name: sklearn
+  spec:
+    predictors:
+    - name: default
+      replicas: 1
+      graph:
+        name: classifier
+        implementation: SKLEARN_SERVER
+        modelUri: s3://sklearn/iris
+        storageInitializerImage: seldonio/rclone-storage-initializer:1.14.0-dev  # Specify custom image here
+        envSecretRefName: seldon-init-container-secret  
+
+
+- apiVersion: v1
+  kind: Secret
+  metadata:
+    name: seldon-rclone-secret
+  type: Opaque
+  stringData:
+    RCLONE_CONFIG_S3_TYPE: ${type}  S3
+    RCLONE_CONFIG_S3_PROVIDER: minio  
+    RCLONE_CONFIG_S3_ENV_AUTH: "false"
+    RCLONE_CONFIG_S3_ACCESS_KEY_ID: minioadmin
+    RCLONE_CONFIG_S3_SECRET_ACCESS_KEY: minioadmin
+    RCLONE_CONFIG_S3_ENDPOINT: http://minio.minio-system.svc.cluster.local:9000
+
+parameters:
+- description: secret name for
+  name: type
+  # Seldon unique parameters
+- description: secret name for
+  name: provider   
+
+  #requirement by vendor  
+- description: secret name for
+  name: AWS_ACCESS_KEY_ID
+  
+- description: secret name for
+  name: AWS_SECRET_ACCESS_KEY
+- description: secret name for
+  name: AWS_S3_ENDPOINT
+- description: secret name for
+  name: AWS_DEFAULT_REGION
+- description: secret name for
+  name: AWS_DEFAULT_BUCKET
+- description: secret name for
+  name: MODEL_PATH

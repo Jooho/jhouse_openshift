@@ -1,0 +1,21 @@
+[
+    {
+       "category":"modelserving",
+       "applications":[
+          {
+             "name": "openvino",
+             "installed": true,
+             "subscribable": true,
+             "logo":"",
+             "example": "",
+             "certifiedISV":true,
+             "opensource":true,
+             "supported": true,
+             "integration":{
+                "installation_level":2,
+                "installation_doc_url":"explore?selectId=openvino"
+             }
+          }
+       ]
+    }
+ ]

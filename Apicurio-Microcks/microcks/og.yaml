@@ -1,0 +1,10 @@
+apiVersion: operators.coreos.com/v1
+kind: OperatorGroup
+metadata:
+  annotations:
+    olm.providedAPIs: MicrocksInstall.v1alpha1.microcks.github.io
+  name: apicurio-microcks
+  namespace: ${PROJECT_NAME}
+spec:
+  targetNamespaces:
+  - ${PROJECT_NAME}
