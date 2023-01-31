@@ -1,0 +1,15 @@
+apiVersion: "serving.kserve.io/v1beta1"
+kind: "InferenceService"
+metadata:
+  annotations:
+     #https://github.com/kserve/kserve/blob/master/pkg/constants/constants.go
+    "serving.kserve.io/autoscalerClass": "none"
+    # "serving.kserve.io/metrics": "cpu"
+    "serving.kserve.io/deploymentMode": "RawDeployment"
+  name: "flower-sample"
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: tensorflow
+      storageUri: "gs://kfserving-examples/models/tensorflow/flowers"

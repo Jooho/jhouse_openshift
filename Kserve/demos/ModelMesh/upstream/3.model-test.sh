@@ -11,8 +11,8 @@ source "./config.sh"
 
 NS=mm
 kubectl create ns ${NS}
-ACCESS_KEY_ID=$(kubectl get secret -n modelmesh-serving storage-config -o yaml |yq '.data.localMinIO|@base64d'|jq .access_key_id)
-SECRET_ACCESS_KEY=$(kubectl get secret -n modelmesh-serving storage-config -o yaml |yq '.data.localMinIO|@base64d'|jq .secret_access_key)
+ACCESS_KEY_ID=$(kubectl get secret -n modelmesh-serving storage-config -o yaml |yq '.data.localMinIO|@base64d'|jq  --raw-output .access_key_id)
+SECRET_ACCESS_KEY=$(kubectl get secret -n modelmesh-serving storage-config -o yaml |yq '.data.localMinIO|@base64d'|jq  --raw-output .secret_access_key)
 
 sed "s/<accesskey>/$ACCESS_KEY_ID/g" ./minio-secret.yaml | sed "s/<minio-ns>/${MINIO_NS}/g" | tee ./minio-secret-current.yaml 
 sed "s/<secretkey>/$SECRET_ACCESS_KEY/g" -i ./minio-secret-current.yaml 
