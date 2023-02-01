@@ -65,7 +65,8 @@ cd ${DEMO_HOME}
 
 export MODEL_NAME=flower-sample
 kubectl create ns kserve-test
-kubectl create -f jhouse_openshift/Kserve/docs/RawDeployment/manifests/tensorflow.yaml
+kubectl label ns kserve-test modelmesh-enabled=true --overwrite=true
+kubectl create -f jhouse_openshift/Kserve/docs/RawDeployment/manifests/tensorflow.yaml -n kserve-test
 
 ## HPA is always created now you have to delete hpa as a workaround(https://github.com/kserve/kserve/pull/2658)
 kubectl delete hpa flower-sample-predictor-default
@@ -95,7 +96,8 @@ curl -v \
 export MODEL_NAME=sklearn-irisv2
 
 kubectl create ns kserve-test
-kubectl create -f jhouse_openshift/Kserve/docs/RawDeployment/manifests/sklearn.yaml
+kubectl label ns kserve-test modelmesh-enabled=true --overwrite=true
+kubectl create -f jhouse_openshift/Kserve/docs/RawDeployment/manifests/sklearn.yaml -n kserve-test
 
 ## HPA is always created now you have to delete hpa as a workaround(https://github.com/kserve/kserve/pull/2658)
 kubectl delete hpa sklearn-irisv2-predictor-default
