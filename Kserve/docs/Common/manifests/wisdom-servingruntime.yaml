@@ -35,10 +35,10 @@ spec:
     resources:
       limits:
         cpu: 2
-        memory: 16Gi
+        memory: 12Gi
       requests:
         cpu: 1
-        memory: 16Gi
+        memory: 5Gi
   grpcDataEndpoint: port:8085
   grpcEndpoint: port:8085
   multiModel: true
