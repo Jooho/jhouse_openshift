@@ -1,0 +1,55 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: model-server-wisdom-dev-gpu
+  labels:
+    opendatahub.io/dashboard: 'true'
+  annotations:
+    enable-route: "false"
+    enable-auth: "false"
+spec:
+  #imagePullSecrets:
+    #- name: custom-registry-secret
+    #- name: ibm-entitlement-key
+  containers:
+  - env:
+      - name: ACCEPT_LICENSE
+        value: "true"
+      - name: LOG_LEVEL
+        value: info
+      - name: CAPACITY
+        value: "28000000000"
+      - name: DEFAULT_MODEL_SIZE
+        value: "1773741824"
+      - name: METRICS_PORT
+        value: "2113"
+      - name: GATEWAY_PORT
+        value: "8060"
+      - name: STRICT_RPC_MODE
+        value: "false"
+      - name: HF_HOME                      ### this avoids the issue writing to /.cache
+        value: "/tmp/"
+      #- name: CUDA_VISIBLE_DEVICES        ### this does not seem to do anything
+      #  value: "0"
+      #- name: USE_EMBEDDED_PULLER
+      #  value: 'true'
+    image: us.icr.io/watson-runtime/fmaas-runtime-ansible-gpu:0.0.4
+    imagePullPolicy: IfNotPresent
+    name: watson-nlp-runtime
+    resources:
+      limits:
+        cpu: 3
+        memory: 5Gi
+        nvidia.com/gpu: "1"
+      requests:
+        cpu: 1
+        memory: 5Gi
+        nvidia.com/gpu: "1"
+  grpcDataEndpoint: port:8085
+  grpcEndpoint: port:8085
+  multiModel: true
+  storageHelper:
+    disabled: false
+  supportedModelFormats:
+    - autoSelect: true
+      name: watson-nlp-custom
