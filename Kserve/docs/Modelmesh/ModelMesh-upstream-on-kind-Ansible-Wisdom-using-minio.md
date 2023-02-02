@@ -106,7 +106,7 @@ kubectl apply -f ./minio-secret-current.yaml -n ${test_mm_ns}
 
 **Create IBM registry secret**
 ~~~
-oc create secret docker-registry ibm-registry-secret --docker-server='us.icr.io' --docker-username='xxxx'  --docker-password='xxxx' --docker-email='asood@us.@ibm.com'
+oc create secret docker-registry ibm-registry-secret --docker-server='us.icr.io' --docker-username='xxxx'  --docker-password='xxxx' --docker-email='user@account.com'
 #for "oc debug" optional
 kubectl create secret docker-registry redhat-registry-secret --from-file=.dockerconfigjson=/home/jooho/Downloads/pull-secret.txt
 

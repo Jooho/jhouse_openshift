@@ -94,7 +94,7 @@ oc label namespace ${test_mm_ns} modelmesh-enabled=true --overwrite=true
 oc label namespace ${test_mm_ns} opendatahub.io/dashboard=true --overwrite=true
 
 # Create IBM registry secret (You must update `xxxx`)
-oc create secret docker-registry ibm-registry-secret --docker-server='us.icr.io' --docker-username='xxxx'  --docker-password='xxxx' --docker-email='asood@us.@ibm.com'
+oc create secret docker-registry ibm-registry-secret --docker-server='us.icr.io' --docker-username='xxxx'  --docker-password='xxxx' --docker-email='user@account.com'
 
 # Minio secret
 oc apply -f ./minio-secret-current.yaml -n ${test_mm_ns}
