@@ -92,7 +92,7 @@ stringData:
 EOF
 
 # Create IBM registry secret (You must update `xxxx`)
-oc create secret docker-registry ibm-registry-secret --docker-server='us.icr.io' --docker-username='xxxx'  --docker-password='xxxx' --docker-email='asood@us.@ibm.com'
+oc create secret docker-registry ibm-registry-secret --docker-server='us.icr.io' --docker-username='xxxx'  --docker-password='xxxx' --docker-email='user@account.com'
 ~~~
 
 **Create Watson Runtime**
