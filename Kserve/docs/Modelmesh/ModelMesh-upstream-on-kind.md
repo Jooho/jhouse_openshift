@@ -41,6 +41,9 @@ source ${DEMO_HOME}/jhouse_openshift/Kserve/demos/utils/common.sh
 
 # Export ModelMesh manifests
 export MM_MANIFESTS_HOME=${DEMO_HOME}/jhouse_openshift/Kserve/docs/Modelmesh/manifests
+
+# Export common manifests dir
+export COMMON_MANIFESTS_HOME=${DEMO_HOME}/jhouse_openshift/Kserve/docs/Common/manifests
 ~~~
 
 ## Install Model Mesh
@@ -85,7 +88,7 @@ You can a storageUri as well. Refer [manifests/sklean-storageUri.yaml](manifests
 ACCESS_KEY_ID=$(kubectl get secret -n modelmesh-serving storage-config -o yaml |yq '.data.localMinIO|@base64d'|jq --raw-output .access_key_id)
 SECRET_ACCESS_KEY=$(kubectl get secret -n modelmesh-serving storage-config -o yaml |yq '.data.localMinIO|@base64d'|jq --raw-output .secret_access_key)
 
-sed "s/<accesskey>/$ACCESS_KEY_ID/g" ${MM_MANIFESTS_HOME}/minio-secret.yaml | sed "s/<minio-ns>/${MINIO_NS}/g" | tee ./minio-secret-current.yaml 
+sed "s/<accesskey>/$ACCESS_KEY_ID/g" ${COMMON_MANIFESTS_HOME}/minio-secret.yaml | sed "s/<minio-ns>/${MINIO_NS}/g" | tee ./minio-secret-current.yaml 
 sed "s+<secretkey>+$SECRET_ACCESS_KEY+g" -i ./minio-secret-current.yaml 
 
 kubectl apply -f ./minio-secret-current.yaml -n ${test_mm_ns}

@@ -3,7 +3,7 @@
 ## Deploy CRC for Model Serving test
 ~~~
 crc setup 
-crc config set memory 35000 
+crc config set memory 38000 
 crc config set cpus 8 
 crc config set disk-size 70 
 crc config set kubeadmin-password kubeadmin 
