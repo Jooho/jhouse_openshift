@@ -1,4 +1,4 @@
-# Model Mesh Only with ODH on CRC
+# Model Mesh with RHODS on CRC
 
 *Environment*
  - [CRC](../ETC/CRC.md)
@@ -36,34 +36,33 @@ export MM_MANIFESTS_HOME=${DEMO_HOME}/jhouse_openshift/Kserve/docs/Modelmesh/man
 # Export common manifests dir
 export COMMON_MANIFESTS_HOME=${DEMO_HOME}/jhouse_openshift/Kserve/docs/Common/manifests
 
-export ODH_NS=opendatahub
+export RHODS_OP_NS=redhat-ods-operator
+export RHODS_APP_NS=redhat-ods-applications
 export MINIO_NS=minio
-export test_mm_ns=${ODH_NS}-mm
+export test_mm_ns=mm-1
 ~~~
 
 
 ## Installation
 
-**Deploy ODH operator**
+**Install RHODS**
 ~~~
-oc create -f ${COMMON_MANIFESTS_HOME}/subs-odh-operator.yaml
-check_pod_ready name=opendatahub-operator openshift-operators
+oc new-project ${RHODS_OP_NS}
+oc create -f ${COMMON_MANIFESTS_HOME}/subs-rhods-operator.yaml -n ${RHODS_OP_NS}
+check_pod_ready name=rhods-operator ${RHODS_OP_NS}
+
+#(Optional) If you want to deploy ModelMesh only, execute the following command when RHODS installation done.
+## Remove other components except Model Mesh
+ #  oc delete kfdef rhods-anaconda rhods-dashboard rhods-nbc rhods-notebooks -n ${RHODS_APP_NS}
+
+check_pod_ready app=model-mesh ${RHODS_APP_NS}
+check_pod_ready app=odh-model-controller ${RHODS_APP_NS}
 ~~~
 
-**Deploy Model Mesh**
-~~~
-
-oc new-project ${ODH_NS}
-oc create -f  ${MM_MANIFESTS_HOME}/kfdef-odh-modelmesh.yaml
-
-check_pod_ready app=model-mesh ${ODH_NS}
-check_pod_ready app=odh-model-controller ${ODH_NS}
-~~~
 
 ## Test model
 **Deploy Minio**
 ~~~
-
 ACCESS_KEY_ID=THEACCESSKEY
 SECRET_ACCESS_KEY=$(openssl rand -hex 32)
 
@@ -74,8 +73,7 @@ sed "s/<accesskey>/$ACCESS_KEY_ID/g"  ${COMMON_MANIFESTS_HOME}/minio.yaml | sed 
 sed "s/<accesskey>/$ACCESS_KEY_ID/g" ${COMMON_MANIFESTS_HOME}/minio-secret.yaml | sed "s+<secretkey>+$SECRET_ACCESS_KEY+g" |sed 's+http://minio.modelmesh-serving.svc:9000+http://minio.minio.svc:9000+g'  | tee ./minio-secret-current.yaml | oc -n ${MINIO_NS} apply -f - 
 ~~~
 
-
-### HTTP
+### HTTPS (Edge)
 
 **Deploy Model**
 ~~~
@@ -91,19 +89,19 @@ oc apply -n ${test_mm_ns} -f  ${COMMON_MANIFESTS_HOME}/openvino-inference-servic
 check_pod_ready modelmesh-service=modelmesh-serving ${test_mm_ns}
 ~~~
 
-**Curl Test using HTTP**
+**Curl Test using HTTPS(Edge)**
 ~~~
-export Token=$(oc create token user-one -n ${test_mm_ns})
-export HOST_URL=$(oc get route example-onnx-mnist -ojsonpath='{.spec.host}' -n ${test_mm_ns})
-export HOST_PATH=$(oc get route example-onnx-mnist  -ojsonpath='{.spec.path}' -n ${test_mm_ns})
+  export Token=$(oc create token user-one -n ${test_mm_ns})
+  export HOST_URL=$(oc get route example-onnx-mnist -ojsonpath='{.spec.host}' -n ${test_mm_ns})
+  export HOST_PATH=$(oc get route example-onnx-mnist  -ojsonpath='{.spec.path}' -n ${test_mm_ns})
 
-curl  -H "Authorization: Bearer ${Token}" --silent --location --fail --show-error http://${HOST_URL}${HOST_PATH}/infer -d  @${COMMON_MANIFESTS_HOME}/input-onnx.json
+  curl  -H "Authorization: Bearer ${Token}" --silent --location --fail --show-error --insecure https://${HOST_URL}${HOST_PATH}/infer -d  @${COMMON_MANIFESTS_HOME}/input-onnx.json
 ~~~
 
 
-### HTTPS
+### HTTPS (Reencrypt)
 
-**Create a isvc using HTTPS**
+**Deploy Model**
 ~~~
 oc delete project ${test_mm_ns}
 
@@ -120,7 +118,7 @@ oc apply -n ${test_mm_ns} -f  ${COMMON_MANIFESTS_HOME}/openvino-inference-servic
 check_pod_ready modelmesh-service=modelmesh-serving ${test_mm_ns}
 ~~~
 
-**Send Predict using HTTPS**
+**Send Predict using HTTPS(Reencrypt)**
 ~~~
 export Token=$(oc create token user-one -n ${test_mm_ns})
 export HOST_URL=$(oc get route example-onnx-mnist -ojsonpath='{.spec.host}' -n ${test_mm_ns})
@@ -132,11 +130,14 @@ curl  -H "Authorization: Bearer ${Token}" --silent --location --fail --show-erro
 ## Cleanup
 ~~~
 oc delete -n ${test_mm_ns} -f  ${COMMON_MANIFESTS_HOME}/openvino-inference-service.yaml 
-oc delete -f ${COMMON_MANIFESTS_HOME}/openvino-serving-runtime.yaml -n ${test_mm_ns}
-oc delete -f ${MM_MANIFESTS_HOME}/kfdef-odh-modelmesh.yaml -n ${ODH_NS}
-oc delete ns ${ODH_NS}
-oc delete -f ${MM_MANIFESTS_HOME}/subs-odh-operator.yaml -n openshift-operators
-oc delete csv $(oc get csv -n openshift-operators|grep opendatahub|awk '{print $1}') -n openshift-operators
+oc delete ns ${test_mm_ns} --wait
+
+oc create configmap delete-self-managed-odh -n redhat-ods-operator 
+oc label configmap/delete-self-managed-odh api.openshift.com/addon-managed-odh-delete=true -n ${RHODS_OP_NS}
+while [[ $(oc get ns redhat-ods-applications --no-headers --ignore-not-found |wc -l) != 0 ]]; do echo "RHODS still exist. It will check every 10 secs"; sleep 10; done
+
+# When all objects are removed, then delete redhat-ods-operator namespace
+oc delete namespace ${RHODS_OP_NS}
 
 oc delete ns ${MINIO_NS}
 ~~~

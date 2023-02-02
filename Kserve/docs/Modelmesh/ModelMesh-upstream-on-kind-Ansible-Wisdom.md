@@ -57,6 +57,15 @@ sed 's+kserve/modelmesh-minio-examples:latest+quay.io/jooholee/modelmesh-minio-e
 
 kubectl create namespace modelmesh-serving
 
+#Please ask jooho about the secret file
+kubectl create namespace modelmesh-serving
+
+sed 's/jooholee-pull-secret/custom-registry-secret/g' -i  ~/Downloads/jooholee-secret.yml 
+kubectl create -f ~/Downloads/jooholee-secret.yml --namespace=modelmesh-serving
+
+kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "custom-registry-secret"}]}' -n modelmesh-serving  
+
+
 ./scripts/install.sh --namespace modelmesh-serving --quickstart
 ~~~
 
@@ -193,7 +202,7 @@ git clone git@github.com:rh-aiservices-pilot/ans-wis-model.git
 cd ans-wis-model/clientcalls
 chmod 777 grpcurl.sh
 
-sed 's/gpu-version-inference-service/syntax-izumo-en-custom-2/g' -i ./grpcurl.sh
+sed 's/gpu-version-inference-service-v01/syntax-izumo-en-custom-2/g' -i ./grpcurl.sh
 
 ./grpcurl.sh "install node on rhel" 
 install node on rhel
