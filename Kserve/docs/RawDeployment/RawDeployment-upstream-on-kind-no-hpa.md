@@ -50,16 +50,30 @@ export RAW_MANIFESTS_HOME=${DEMO_HOME}/jhouse_openshift/Kserve/docs/RawDeploymen
 git clone https://github.com/kserve/kserve.git
 cd kserve
 
-export controller_img=quay.io/jooholee/manager-12782ae64d3f5f3dbe4595b05a2cb78d@sha256:f096b4b550d56a9efe064792d722efb6af82d32aad0b4c8a27797d88e29dc0c4
+kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.11.0/cert-manager.yaml
 
 cat <<EOF >./deploy-target-kserve.sh
 #!/bin/bash
 cd config/default; kustomize edit add resource certmanager/certificate.yaml; cd ../..
 mode='{"defaultDeploymentMode":"RawDeployment"}' yq -i '.data.deploy=strenv(mode)' config/configmap/inferenceservice.yaml
-yq -i '.spec.template.spec.containers.0.image=env(controller_img)' config/overlays/development/manager_image_patch.yaml
 kustomize build config/overlays/development | kubectl apply -f -
 kubectl wait --for=condition=ready pod -l control-plane=kserve-controller-manager -n kserve --timeout=300s
 kustomize build config/runtimes | kubectl apply -f -
+EOF
+
+cat <<EOF >./config/overlays/development/manager_image_patch.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kserve-controller-manager
+  namespace: kserve
+spec:
+  template:
+    spec:
+      containers:
+        - name: manager
+          command:
+          image: quay.io/jooholee/manager-12782ae64d3f5f3dbe4595b05a2cb78d@sha256:bed9514d7c8ede23ff52d5d3c13546377861b029d0d5025a770edb2896c393c3
 EOF
 
 chmod 777 ./deploy-target-kserve.sh
