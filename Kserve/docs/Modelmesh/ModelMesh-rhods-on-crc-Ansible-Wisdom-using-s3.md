@@ -4,7 +4,7 @@
  - [CRC](../ETC/CRC.md)
  - [Custom RHODS](https://github.com/rh-aiservices-pilot/ans-wis-model/blob/main/deploy.rhods.livebuild.and.override.sh)
 
-**Pre-resuisite steps & check**
+**Pre-requisite steps & check**
 ~~~
 # Check yq version
 yq --version
