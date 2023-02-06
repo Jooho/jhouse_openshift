@@ -49,16 +49,15 @@ export runtime_version=0.0.3   #latest version is 0.0.6(wisdom-v2)
 
 ## Install Model Mesh
 
-** Deploy required components
+**Deploy required components**
 ~~~
 cd $DEMO_HOME
 
 RELEASE=release-0.10
 git clone -b $RELEASE --depth 1 --single-branch https://github.com/kserve/modelmesh-serving.git
+cd modelmesh-serving
 
 sed "s+kserve/modelmesh-minio-examples:latest+quay.io/jooholee/modelmesh-minio-examples:${wisdom_img_tag}+g" -i ./config/dependencies/quickstart.yaml
-
-kubectl create namespace modelmesh-serving
 
 #Please ask jooho about the secret file
 kubectl create namespace modelmesh-serving
