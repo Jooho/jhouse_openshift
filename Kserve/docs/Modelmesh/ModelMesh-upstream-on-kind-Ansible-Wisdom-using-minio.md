@@ -41,6 +41,9 @@ source ${DEMO_HOME}/jhouse_openshift/Kserve/demos/utils/common.sh
 
 # Export ModelMesh manifests
 export MM_MANIFESTS_HOME=${DEMO_HOME}/jhouse_openshift/Kserve/docs/Modelmesh/manifests
+
+export wisdom_img_tag=wisdom   #latest version is wisdom-v2(0.0.6)
+export runtime_version=0.0.3   #latest version is 0.0.6(wisdom-v2)
 ~~~
 
 
@@ -53,7 +56,7 @@ cd $DEMO_HOME
 RELEASE=release-0.10
 git clone -b $RELEASE --depth 1 --single-branch https://github.com/kserve/modelmesh-serving.git
 
-sed 's+kserve/modelmesh-minio-examples:latest+quay.io/jooholee/modelmesh-minio-examples:wisdom+g' -i ./config/dependencies/quickstart.yaml
+sed "s+kserve/modelmesh-minio-examples:latest+quay.io/jooholee/modelmesh-minio-examples:${wisdom_img_tag}+g" -i ./config/dependencies/quickstart.yaml
 
 kubectl create namespace modelmesh-serving
 
@@ -115,57 +118,7 @@ kubectl patch serviceaccount default -p '{"imagePullSecrets": [{"name": "ibm-reg
 
 **Create Watson Runtime**
 ~~~
-cat <<EOF |oc apply -f - 
-apiVersion: serving.kserve.io/v1alpha1
-kind: ServingRuntime
-metadata:
-  name: watson-nlp-runtime-custom
-  annotations:
-    enable-route: "true"
-    enable-auth: "false"
-spec:
-  #imagePullSecrets:
-    #- name: custom-registry-secret
-    #- name: ibm-entitlement-key
-  containers:
-  - env:
-      - name: ACCEPT_LICENSE
-        value: "true"
-      - name: LOG_LEVEL
-        value: info
-      - name: CAPACITY
-        value: "28000000000"
-      - name: DEFAULT_MODEL_SIZE
-        value: "1773741824"
-      - name: METRICS_PORT
-        value: "2113"
-      - name: GATEWAY_PORT
-        value: "8060"
-      - name: STRICT_RPC_MODE
-        value: "false"
-      - name: HF_HOME
-        value: "/tmp/"
-      #- name: USE_EMBEDDED_PULLER
-      #  value: 'true'
-    image: us.icr.io/watson-runtime/fmaas-runtime-ansible:0.0.3
-    imagePullPolicy: IfNotPresent
-    name: watson-nlp-runtime
-    resources:
-      limits:
-        cpu: 2
-        memory: 16Gi
-      requests:
-        cpu: 1
-        memory: 16Gi
-  grpcDataEndpoint: port:8085
-  grpcEndpoint: port:8085
-  multiModel: true
-  storageHelper:
-    disabled: false
-  supportedModelFormats:
-    - autoSelect: true
-      name: watson-nlp-custom
-EOF
+kubectl apply -f ${COMMON_MANIFESTS_HOME}/wisdom-servingruntime-${runtime_version}.yaml -n ${test_mm_ns}
 ~~~
 
 **Deploy Wisdom**
