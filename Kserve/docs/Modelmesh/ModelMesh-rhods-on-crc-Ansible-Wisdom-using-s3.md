@@ -38,8 +38,8 @@ export COMMON_MANIFESTS_HOME=${DEMO_HOME}/jhouse_openshift/Kserve/docs/Common/ma
 export RHODS_OP_NS=redhat-ods-operator
 export RHODS_APP_NS=redhat-ods-applications
 export test_mm_ns=wisdom
-export wisdom_img_tag=wisdom   #latest version is wisdom-v2(0.0.6)
-export runtime_version=0.0.3   #latest version is 0.0.6(wisdom-v2)
+export wisdom_img_tag=wisdom   #latest version is wisdom(0.0.4)
+export runtime_version=0.0.4   #latest version is 0.0.4(wisdom)
 ~~~
 
 
