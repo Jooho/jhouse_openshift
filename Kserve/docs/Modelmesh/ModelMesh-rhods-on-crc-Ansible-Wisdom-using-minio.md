@@ -39,6 +39,8 @@ export RHODS_OP_NS=redhat-ods-operator
 export RHODS_APP_NS=redhat-ods-applications
 export MINIO_NS=minio
 export test_mm_ns=wisdom
+export wisdom_img_tag=wisdom   #latest version is wisdom-v2(0.0.6)
+export runtime_version=0.0.3   #latest version is 0.0.6(wisdom-v2)
 ~~~
 
 
@@ -81,7 +83,7 @@ oc create -f ~/Downloads/jooholee-secret.yml --namespace=${MINIO_NS}
 
 oc patch serviceaccount default -p '{"imagePullSecrets": [{"name": "custom-registry-secret"}]}' -n ${MINIO_NS}
 
-sed "s/<accesskey>/$ACCESS_KEY_ID/g"  ${COMMON_MANIFESTS_HOME}/minio.yaml | sed "s+<secretkey>+$SECRET_ACCESS_KEY+g" | sed 's+quay.io/opendatahub/modelmesh-minio-examples:v0.8.0+quay.io/jooholee/modelmesh-minio-examples:wisdom+g' |tee ./minio-current.yaml | oc -n ${MINIO_NS} apply -f -
+sed "s/<accesskey>/$ACCESS_KEY_ID/g"  ${COMMON_MANIFESTS_HOME}/minio.yaml | sed "s+<secretkey>+$SECRET_ACCESS_KEY+g" | sed "s+quay.io/opendatahub/modelmesh-minio-examples:v0.8.0+quay.io/jooholee/modelmesh-minio-examples:${wisdom_img_tag}+g" |tee ./minio-current.yaml | oc -n ${MINIO_NS} apply -f -
 
 sed "s/<accesskey>/$ACCESS_KEY_ID/g" ${COMMON_MANIFESTS_HOME}/minio-secret.yaml | sed "s+<secretkey>+$SECRET_ACCESS_KEY+g" |sed 's+http://minio.modelmesh-serving.svc:9000+http://minio.minio.svc:9000+g'  | tee ./minio-secret-current.yaml | oc -n ${MINIO_NS} apply -f - 
 ~~~
@@ -103,7 +105,7 @@ oc apply -f  ${COMMON_MANIFESTS_HOME}/sa_user.yaml -n ${test_mm_ns}
 
 **Create Watson Runtime**
 ~~~
-oc apply -f ${COMMON_MANIFESTS_HOME}/wisdom-servingruntime.yaml -n ${test_mm_ns}
+oc apply -f ${COMMON_MANIFESTS_HOME}/wisdom-servingruntime-${runtime_version}.yaml -n ${test_mm_ns}
 ~~~
 
 **Deploy Wisdom**

@@ -38,6 +38,8 @@ export COMMON_MANIFESTS_HOME=${DEMO_HOME}/jhouse_openshift/Kserve/docs/Common/ma
 export RHODS_OP_NS=redhat-ods-operator
 export RHODS_APP_NS=redhat-ods-applications
 export test_mm_ns=wisdom
+export wisdom_img_tag=wisdom   #latest version is wisdom-v2(0.0.6)
+export runtime_version=0.0.3   #latest version is 0.0.6(wisdom-v2)
 ~~~
 
 
@@ -97,7 +99,7 @@ oc create secret docker-registry ibm-registry-secret --docker-server='us.icr.io'
 
 **Create Watson Runtime**
 ~~~
-oc apply -f ${COMMON_MANIFESTS_HOME}/wisdom-servingruntime-gpu.yaml -n ${test_mm_ns}
+oc apply -f ${COMMON_MANIFESTS_HOME}/wisdom-servingruntime-gpu-${runtime_version}.yaml -n ${test_mm_ns}
 ~~~
 
 **Deploy Wisdom**
