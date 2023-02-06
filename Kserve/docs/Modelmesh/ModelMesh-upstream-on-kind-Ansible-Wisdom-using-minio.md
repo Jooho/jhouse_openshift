@@ -42,6 +42,9 @@ source ${DEMO_HOME}/jhouse_openshift/Kserve/demos/utils/common.sh
 # Export ModelMesh manifests
 export MM_MANIFESTS_HOME=${DEMO_HOME}/jhouse_openshift/Kserve/docs/Modelmesh/manifests
 
+# Export common manifests dir
+export COMMON_MANIFESTS_HOME=${DEMO_HOME}/jhouse_openshift/Kserve/docs/Common/manifests
+
 export wisdom_img_tag=wisdom   #latest version is wisdom-v2(0.0.6)
 export runtime_version=0.0.3   #latest version is 0.0.6(wisdom-v2)
 ~~~
@@ -57,7 +60,7 @@ RELEASE=release-0.10
 git clone -b $RELEASE --depth 1 --single-branch https://github.com/kserve/modelmesh-serving.git
 cd modelmesh-serving
 
-sed "s+kserve/modelmesh-minio-examples:latest+quay.io/jooholee/modelmesh-minio-examples:${wisdom_img_tag}+g" -i ./config/dependencies/quickstart.yaml
+sed "s+kserve/modelmesh-minio-examples:.*$+quay.io/jooholee/modelmesh-minio-examples:${wisdom_img_tag}+g" -i ./config/dependencies/quickstart.yaml
 
 #Please ask jooho about the secret file
 kubectl create namespace modelmesh-serving
@@ -90,11 +93,14 @@ cd $DEMO_HOME
 export test_mm_ns=mm-1
 
 kubectl create ns ${test_mm_ns}
+
 kubectl label namespace ${test_mm_ns} modelmesh-enabled=true --overwrite=true
+
 kubectl config set-context --current --namespace=${test_mm_ns}
 ~~~
 
 **Create a minio secret**
+
 You can a storageUri as well. Refer [manifests/sklean-storageUri.yaml](manifests/sklearn-storageUri.yaml)
 ~~~
 ACCESS_KEY_ID=$(kubectl get secret -n modelmesh-serving storage-config -o yaml |yq '.data.localMinIO|@base64d'|jq --raw-output .access_key_id)
@@ -107,6 +113,7 @@ kubectl apply -f ./minio-secret-current.yaml -n ${test_mm_ns}
 ~~~
 
 **Create IBM registry secret**
+
 ~~~
 oc create secret docker-registry ibm-registry-secret --docker-server='us.icr.io' --docker-username='xxxx'  --docker-password='xxxx' --docker-email='user@account.com'
 #for "oc debug" optional
