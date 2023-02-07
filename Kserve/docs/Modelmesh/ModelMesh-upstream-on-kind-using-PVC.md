@@ -1,4 +1,4 @@
-# Ansible Wisdom Model running on Watson Runtime using Kubernetes(KIND)
+# Upstream Model Mesh on KIND using PVC
 
 *Environment*
  - Kubernetes(KIND)
