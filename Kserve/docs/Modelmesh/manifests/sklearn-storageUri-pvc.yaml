@@ -4,13 +4,10 @@ metadata:
   name: example-sklearn-isvc
   annotations:
     serving.kserve.io/deploymentMode: ModelMesh
+    serving.kserve.io/secretKey: localMinIO
 spec:
   predictor:
     model:
       modelFormat:
         name: sklearn
-      storage:
-        parameters:
-          type: pvc
-          name: model-pvc
-        path: sklearn/mnist-svm.joblib
+      storageUri: pvc://model-pvc/sklearn/mnist-svm.joblib
