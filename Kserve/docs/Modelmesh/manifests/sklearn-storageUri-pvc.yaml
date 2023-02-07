@@ -4,7 +4,6 @@ metadata:
   name: example-sklearn-isvc
   annotations:
     serving.kserve.io/deploymentMode: ModelMesh
-    serving.kserve.io/secretKey: localMinIO
 spec:
   predictor:
     model:
