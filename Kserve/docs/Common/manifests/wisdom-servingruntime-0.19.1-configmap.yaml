@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: wisdom-runtime-srv
+data:
+  runtime_config.yaml: |
+    jvm_options: []
+    ## this variable is how long the loading can take before it fails.
+    ## its default value is 121 seconds.
+    ## in Erwan's environment the load/conversion takes about 340 seconds.
+    model_loading_timeout_ms: 600000
+    #latency_based_autoscaling_enabled: true
+    #max_model_concurrency: 4
+    distributed:
+      enabled: true
+      #preferred_backends:
+      #  standalone-model: TGIS
+      #  wisdom: TGIS
+      config:
+        backend_priority:
+          - TGIS
+        backends:
+          tgis:
+            local:
+              ## another timeout that needs to be bumped up.
+              load_timeout: 600 # total time given for the model to be loaded

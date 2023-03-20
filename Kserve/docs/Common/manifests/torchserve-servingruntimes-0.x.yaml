@@ -1,0 +1,103 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: ServingRuntime
+metadata:
+  name: torchserve-0.x
+  labels:
+    name: modelmesh-serving-torchserve-0.x-SR
+spec:
+  supportedModelFormats:
+    - autoSelect: true
+      name: watson
+    - name: pytorch-mar
+      version: "0"
+      autoSelect: true
+  storageHelper:
+    disabled: false      
+
+  multiModel: true
+  grpcDataEndpoint: port:8087
+  grpcEndpoint: port:8087
+
+  containers:
+    - name: torchserve
+      image: pytorch/torchserve:0.6.0-cpu
+      args:
+        # Adapter creates the config file; wait for it to exist before starting
+        - while [ ! -e "$TS_CONFIG_FILE" ]; do echo "waiting for config file..."; sleep 1; done;
+        - exec
+        - torchserve
+        - --start
+        - --foreground
+      env:
+        - name: ACCEPT_LICENSE
+          value: "true"
+        - name: LOG_LEVEL
+          value: debug3
+        - name: CAPACITY
+          value: "99000000000"
+        - name: DEFAULT_MODEL_SIZE
+          value: "1773741824"
+        - name: SERVICE_PORT
+          value: "8087"
+        - name: GATEWAY_PORT
+          value: "8060"
+        - name: METRICS_PORT
+          value: "2113"
+        - name: STRICT_RPC_MODE
+          value: "false"
+        - name: CONFIG_FILES
+          value: "/conf/runtime_config.yaml"
+        - name: LOCAL_MODELS_DIR
+          value: "/models/"
+        # TGIS env vars
+        - name: MAX_BATCH_SIZE
+          value: "8"
+        - name: MAX_SEQUENCE_LENGTH
+          value: "2048"
+        - name: NUM_GPUS
+          value: "1"
+        - name: CUDA_VISIBLE_DEVICES
+          value: "0"
+        - name: MERGE_ONNX_GRAPHS
+          value: "true"
+        - name: TRANSFORMERS_CACHE
+          value: /tmp/transformers_cache
+        - name: HUGGINGFACE_HUB_CACHE
+          value: /tmp/transformers_cache
+        - name: MAX_CONCURRENT_REQUESTS
+          value: "64"
+        - name: DEPLOYMENT_FRAMEWORK
+          value: hf_optimum_ort
+        # - name: TS_CONFIG_FILE
+        #   value: /models/_torchserve_models/mmconfig.properties
+        # TBD, this may give better performance
+        #- name: TS_PREFER_DIRECT_BUFFER
+        #  value: true
+        # Additional TS_ prefixed TorchServe config options may be added here
+      ports:
+        - containerPort: 8087
+          name: runtime-grpc
+          protocol: TCP
+        - containerPort: 8060
+          name: runtime-rest
+          protocol: TCP
+      resources:
+        limits:
+          cpu: 4
+          memory: 22Gi
+        requests:
+          cpu: 4
+          memory: 22Gi
+      volumeMounts:
+        - name: wisdom-runtime
+          subPath: runtime_config.yaml
+          mountPath: "/conf/runtime_config.yaml"
+  volumes:
+    - name: wisdom-runtime
+      configMap:
+        name: wisdom-runtime-srv          
+  builtInAdapter:
+    serverType: torchserve
+    runtimeManagementPort: 7071
+    memBufferBytes: 134217728
+    modelLoadingTimeoutMillis: 90000
