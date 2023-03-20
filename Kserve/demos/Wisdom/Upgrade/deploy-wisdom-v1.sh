@@ -26,7 +26,7 @@ if [[ z${RHODS_INSTALL} == z ]];then
       -p "$(cat ${COMMON_MANIFESTS_HOME}/wisdom-servingruntimes-configmap-${runtime_version}.yaml)"
 
   oc delete pod -l control-plane=modelmesh-controller --force  -n ${RHODS_APP_NS}
-  check_pod_ready control-plane=modelmesh-controller   ${RHODS_APP_NS}
+  
 fi
 
 
@@ -90,6 +90,8 @@ EOF
   oc patch serviceaccount modelmesh-serving-sa -p '{"imagePullSecrets": [{"name": "ibm-registry-secret"}]}'    
 
   oc delete pod --all --force
+
+  check_pod_ready modelmesh-service=modelmesh-serving  ${RHODS_APP_NS}
 fi
 
 if [[ z${PORT_FORWARD} == z ]];then

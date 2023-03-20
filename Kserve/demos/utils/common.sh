@@ -29,6 +29,40 @@ function log::time() {
     printf "[${yellow}${currentDate}${clear}]"
 }
 
+function wait_pod_deleted(){
+    pod_label=$1
+    namespace=$2
+    checkcount=20
+    tempcount=0
+
+    while true; do
+        pod_exist=$(oc get pod -l ${pod_label} -n ${namespace} --ignore-not-found)
+
+        if [[ ${pod_exist} != '' ]]
+        then
+            ready=$(oc get pod -l ${pod_label} -n ${namespace} --no-headers|head -1|awk '{print $2}'|cut -d/ -f1)
+            desired=$(oc get pod -l ${pod_label} -n ${namespace} --no-headers|head -1|awk '{print $2}'|cut -d/ -f2)
+
+            if [[ $ready == $desired ]]
+            then
+                log::str::print "${green}[SUCCESS] Pod(s) with label '${pod_label}' is(are) deleted!${clear}\n"
+                break
+            else 
+                tempcount=$((tempcount+1))
+                log::str::print "${info}[Deleting] Pod(s) with label '${pod_label}' is(are) being deleted: $tempcount times${clear}\n"
+                log::str::print "${info}[Deleting] Wait for 10 seconds${clear}\n"
+
+                sleep 10
+            fi
+            if [[ $ready != $desired ]] && [[ $checkcount == $tempcount ]]
+            then
+                log::str::print "${error}[ERROR] Pod(s) with label '${pod_label}' is(are) NOT deleted${clear}\n"
+                exit 1
+            fi
+        fi
+    done
+
+}
 
 function check_pod_ready(){
     pod_label=$1
