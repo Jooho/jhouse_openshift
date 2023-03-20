@@ -1,7 +1,7 @@
 apiVersion: serving.kserve.io/v1alpha1
 kind: ServingRuntime
 metadata:
-  name: watson-nlp-runtime-custom
+  name: watson-runtime
   annotations:
     enable-route: "true"
     enable-auth: "false"
@@ -29,9 +29,9 @@ spec:
         value: "/tmp/"
       #- name: USE_EMBEDDED_PULLER
       #  value: 'true'
-    image: us.icr.io/watson-runtime/fmaas-runtime-wisdom-ansible:0.0.6
+    image: us.icr.io/watson-runtime/fmaas-runtime-wisdom-ansible:0.0.8
     imagePullPolicy: IfNotPresent
-    name: watson-nlp-runtime
+    name: runtime
     resources:
       limits:
         cpu: 2
@@ -46,4 +46,4 @@ spec:
     disabled: false
   supportedModelFormats:
     - autoSelect: true
-      name: watson-nlp-custom
+      name: watson

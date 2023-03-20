@@ -1,0 +1,92 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: servingruntimes-config
+data:
+  override-config: |
+    apiVersion: serving.kserve.io/v1alpha1
+    kind: ServingRuntime
+    metadata:
+      name: watson-runtime
+    spec:
+      grpcDataEndpoint: port:8087
+      grpcEndpoint: port:8087
+      multiModel: true
+      storageHelper:
+        disabled: false
+      supportedModelFormats:
+        - autoSelect: true
+          name: watson
+      containers:
+        - name: runtime
+          image: quay.io/rhods-wisdom/fmaas-runtime-wisdom-ansible:0.19.1_ubi8_py39
+          env:
+            - name: ACCEPT_LICENSE
+              value: "true"
+            - name: LOG_LEVEL
+              value: debug3
+            - name: CAPACITY
+              value: "99000000000"
+            - name: DEFAULT_MODEL_SIZE
+              value: "1773741824"
+            - name: SERVICE_PORT
+              value: "8087"
+            - name: GATEWAY_PORT
+              value: "8060"
+            - name: METRICS_PORT
+              value: "2113"
+            - name: STRICT_RPC_MODE
+              value: "false"
+            - name: CONFIG_FILES
+              value: "/conf/runtime_config.yaml"
+            - name: LOCAL_MODELS_DIR
+              value: "/models/"
+            # TGIS env vars
+            - name: MAX_BATCH_SIZE
+              value: "8"
+            - name: MAX_SEQUENCE_LENGTH
+              value: "2048"
+            - name: NUM_GPUS
+              value: "1"
+            - name: CUDA_VISIBLE_DEVICES
+              value: "0"
+            - name: MERGE_ONNX_GRAPHS
+              value: "true"
+            - name: TRANSFORMERS_CACHE
+              value: /tmp/transformers_cache
+            - name: HUGGINGFACE_HUB_CACHE
+              value: /tmp/transformers_cache
+            - name: MAX_CONCURRENT_REQUESTS
+              value: "64"
+            - name: DEPLOYMENT_FRAMEWORK
+              value: hf_optimum_ort
+          ports:
+            - containerPort: 8087
+              name: runtime-grpc
+              protocol: TCP
+            - containerPort: 8060
+              name: runtime-rest
+              protocol: TCP
+          resources:
+            limits:
+              cpu: 4
+              memory: 22Gi
+            requests:
+              cpu: 4
+              memory: 22Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            runAsNonRoot: true
+          volumeMounts:
+            - name: wisdom-runtime
+              subPath: runtime_config.yaml
+              mountPath: "/conf/runtime_config.yaml"
+      volumes:
+        - name: wisdom-runtime
+          configMap:
+            name: wisdom-runtime-srv
+      imagePullSecrets:
+        - name: custom-registry-secret

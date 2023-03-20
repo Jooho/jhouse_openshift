@@ -2,7 +2,7 @@
 
 *Environment*
  - [CRC](../ETC/CRC.md)
- - [Custom RHODS](https://github.com/rh-aiservices-pilot/ans-wis-model/blob/main/deploy.rhods.livebuild.and.override.sh)
+ - RHODS 1.22.1-2
 
 **Pre-resuisite steps & check**
 ~~~
@@ -39,8 +39,8 @@ export RHODS_OP_NS=redhat-ods-operator
 export RHODS_APP_NS=redhat-ods-applications
 export MINIO_NS=minio
 export test_mm_ns=wisdom
-export wisdom_img_tag=wisdom   #latest version is wisdom-v2(0.0.6)
-export runtime_version=0.0.3   #latest version is 0.0.6(wisdom-v2)
+export wisdom_img_tag=wisdom  
+export runtime_version=0.0.3  
 ~~~
 
 
@@ -49,7 +49,7 @@ export runtime_version=0.0.3   #latest version is 0.0.6(wisdom-v2)
 **Install RHODS**
 ~~~
 oc new-project ${RHODS_OP_NS}
-oc create -f ${COMMON_MANIFESTS_HOME}/wisdom-custom-rhods-operator.yaml -n ${RHODS_OP_NS}
+oc create -f ${COMMON_MANIFESTS_HOME}/subs-rhods-operator-1.22.1-2.yaml -n ${RHODS_OP_NS}
 check_pod_ready name=rhods-operator ${RHODS_OP_NS}
 
 #(Optional) If you want to deploy ModelMesh only, execute the following command when RHODS installation done.
@@ -62,9 +62,9 @@ check_pod_ready app=odh-model-controller ${RHODS_APP_NS}
 oc -n ${RHODS_APP_NS} \
     patch configmap \
     servingruntimes-config \
-    -p "$(cat ${COMMON_MANIFESTS_HOME}/wisdom-servingruntimes-configmap.yaml)"
+    -p "$(cat ${COMMON_MANIFESTS_HOME}/wisdom-servingruntimes-configmap-${runtime_version}.yaml)"
 
-oc delete pod -l control-plane=modelmesh-controller --force 
+oc delete pod -l control-plane=modelmesh-controller --force  -n ${RHODS_APP_NS}
 ~~~
 
 
@@ -114,15 +114,15 @@ cat <<EOF |oc apply -f -
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
-  name: syntax-izumo-en-custom-2
+  name: ansible-wisdom-v1
   annotations:
     serving.kserve.io/deploymentMode: ModelMesh
 spec:
   predictor:
     model:
       modelFormat:
-        name: watson-nlp-custom
-      runtime: watson-nlp-runtime-custom
+        name: watson
+      runtime: watson-runtime
       storage:
         key: localMinIO
         path: wisdom/aw_model/
@@ -137,7 +137,7 @@ oc delete pod --all --force
 
 **Check model size**
 ~~~
-oc exec -it deploy/modelmesh-serving-watson-nlp-runtime-custom -c puller -- du -h --max-depth=1 /models
+oc exec -it deploy/modelmesh-serving-watson-runtime -c puller -- du -h --max-depth=1 /models
 ~~~
 
 ## Test
@@ -148,7 +148,7 @@ git clone git@github.com:rh-aiservices-pilot/ans-wis-model.git
 cd ans-wis-model/clientcalls
 chmod 777 grpcurl.sh
 
-sed 's/gpu-version-inference-service-v01/syntax-izumo-en-custom-2/g' -i ./grpcurl.sh
+sed 's/gpu-version-inference-service-v05/ansible-wisdom-v1/g' -i ./grpcurl.sh
 
 ./grpcurl.sh "install node on rhel" 
 install node on rhel

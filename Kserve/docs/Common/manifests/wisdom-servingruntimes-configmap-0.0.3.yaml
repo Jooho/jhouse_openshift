@@ -18,7 +18,7 @@ data:
     spec:
       supportedModelFormats:
         - autoSelect: true
-          name: watson-nlp-custom
+          name: watson
       # replicas will be overwritten by the model's replica
       replicas: 1
       protocolVersions:
@@ -27,8 +27,8 @@ data:
       grpcEndpoint: 'port:8085'
       grpcDataEndpoint: 'port:8001'
       containers:
-        - name: watson-nlp-runtime
-          image: 'us.icr.io/watson-runtime/fmaas-runtime-ansible-gpu:0.0.4'
+        - name: runtime
+          image: 'us.icr.io/watson-runtime/fmaas-runtime-ansible:0.0.3'
           env:
             - name: ACCEPT_LICENSE
               value: 'true'
@@ -49,9 +49,9 @@ data:
           resources:
             limits:
               cpu: 2
-              memory: 16Gi
+              memory: 12Gi
             requests:
               cpu: 1
-              memory: 16Gi
+              memory: 5Gi
       storageHelper:
         disabled: false
