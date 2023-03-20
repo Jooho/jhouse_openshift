@@ -79,6 +79,7 @@ sed "s/<accesskey>/$ACCESS_KEY_ID/g" ${COMMON_MANIFESTS_HOME}/minio-secret.yaml 
 ~~~
 oc new-project ${test_mm_ns}
 oc label namespace ${test_mm_ns} modelmesh-enabled=true --overwrite=true
+oc label namespace ${test_mm_ns} opendatahub.io/dashboard=true --overwrite=true
 
 oc apply -f ./minio-secret-current.yaml -n ${test_mm_ns}
 oc apply -f  ${COMMON_MANIFESTS_HOME}/sa_user.yaml -n ${test_mm_ns}
@@ -110,6 +111,7 @@ oc apply -f  ./minio-secret-current.yaml -n ${test_mm_ns}
 oc apply -f  ${COMMON_MANIFESTS_HOME}/sa_user.yaml -n ${test_mm_ns}
 
 oc label namespace ${test_mm_ns} modelmesh-enabled=true --overwrite=true
+oc label namespace ${test_mm_ns} opendatahub.io/dashboard=true --overwrite=true
 
 sed 's/    enable-auth: "false"/    enable-auth: "true"/g'  ${COMMON_MANIFESTS_HOME}/openvino-serving-runtime.yaml | oc apply -n ${test_mm_ns} -f -
 
