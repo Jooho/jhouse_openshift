@@ -9,6 +9,7 @@ data:
     metadata:
       name: watson-runtime
     spec:
+      replicas: 1
       grpcDataEndpoint: port:8087
       grpcEndpoint: port:8087
       multiModel: true

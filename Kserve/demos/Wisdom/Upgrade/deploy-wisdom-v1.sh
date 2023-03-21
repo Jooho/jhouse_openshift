@@ -27,6 +27,8 @@ if [[ z${RHODS_INSTALL} == z ]];then
 
   oc delete pod -l control-plane=modelmesh-controller --force  -n ${RHODS_APP_NS}
   
+  check_pod_ready app=model-mesh ${RHODS_APP_NS}
+  check_pod_ready app=odh-model-controller ${RHODS_APP_NS}
 fi
 
 
@@ -91,7 +93,7 @@ EOF
 
   oc delete pod --all --force
 
-  check_pod_ready modelmesh-service=modelmesh-serving  ${RHODS_APP_NS}
+  check_pod_ready modelmesh-service=modelmesh-serving  ${test_mm_ns}
 fi
 
 if [[ z${PORT_FORWARD} == z ]];then

@@ -23,6 +23,9 @@ if [[ z${SRT_CONFIG_UPDATE} == z ]];then
       -p "$(cat ${COMMON_MANIFESTS_HOME}/wisdom-servingruntimes-configmap-${runtime_version}.yaml)"
 
   oc delete pod -l control-plane=modelmesh-controller --force -n ${RHODS_APP_NS}
+
+  check_pod_ready app=model-mesh ${RHODS_APP_NS}
+  check_pod_ready app=odh-model-controller ${RHODS_APP_NS}
 fi
 
 if [[ z${SRT_UPDATE} == z ]];then
@@ -51,10 +54,11 @@ if [[ z${CHECK_MODEL_SIZE} == z ]];then
   echo $model_size
   echo
 
+  model_size=$(echo $model_size|awk '{print $1}')
   while [[ $model_size == "0" ]]; 
   do
     echo "MODEL is not loaded well so restart one of the serving runtime pods"
-    oc get pod --no-headers=true|head -1|awk '{print $1}'
+    oc delete pod $(oc get pod --no-headers=true|head -1|awk '{print $1}')
 
     check_pod_ready name=modelmesh-serving-watson-runtime  ${test_mm_ns}
     model_size=$(oc exec -it deploy/modelmesh-serving-watson-runtime -c puller -- du -h --max-depth=1 /models)
