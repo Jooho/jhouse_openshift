@@ -72,7 +72,7 @@ PORT_FORWARD=false SRT_CONFIG_UPDATE=false SRT_UPDATE=false MODEL_UPDATE=false .
 ~~~
 
 
-### Replace model files with the same path. 
+### Replace model files with the different path. 
 `./upgrade-wisdom-v6-from-v1-with-change-path.sh`
 
 **Environmental variables**
