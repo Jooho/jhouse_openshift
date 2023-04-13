@@ -14,7 +14,7 @@ kind: InferenceService
 metadata:
   annotations:
     serving.kserve.io/deploymentMode: ModelMesh
-  name: ansible-wisdom
+  name: ansible-wisdom-2
 spec:
   predictor:
     model:

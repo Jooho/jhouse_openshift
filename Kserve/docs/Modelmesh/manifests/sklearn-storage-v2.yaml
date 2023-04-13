@@ -1,15 +1,16 @@
 apiVersion: serving.kserve.io/v1beta1
 kind: InferenceService
 metadata:
-  name: example-sklearn-isvc
+  name: example-sklearn-isvc-v2
   annotations:
     serving.kserve.io/deploymentMode: ModelMesh
 spec:
   predictor:
+    canaryTrafficPercent: 10
     model:
       modelFormat:
         name: sklearn
       runtime: mlserver-0.x
       storage:
         key: localMinIO
-        path: sklearn/mnist-svm.joblib
+        path: sklearn/mnist-svm-v2.joblib
