@@ -175,7 +175,7 @@ kustomize build ./config/namespace-runtimes --load-restrictor LoadRestrictionsNo
 ~~~
 
 **Deploy sklearn model**
-You can a storage as well. Refer [manifests/sklean-storage-pvc.yaml](manifests/sklearn-storage-pvc.yaml)
+You can deploy a storage as well. Refer [manifests/sklean-storage-pvc.yaml](manifests/sklearn-storage-pvc.yaml)
 ~~~
 kubectl create -f ${MM_MANIFESTS_HOME}/sklearn-storageUri-pvc.yaml
 

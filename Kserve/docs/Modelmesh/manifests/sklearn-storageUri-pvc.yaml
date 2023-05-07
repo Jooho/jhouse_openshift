@@ -9,4 +9,5 @@ spec:
     model:
       modelFormat:
         name: sklearn
+      runtime: mlserver-0.x
       storageUri: pvc://model-pvc/sklearn/mnist-svm.joblib

@@ -9,6 +9,7 @@ spec:
     model:
       modelFormat:
         name: sklearn
+      runtime: mlserver-0.x
       storage:
         parameters:
           type: pvc

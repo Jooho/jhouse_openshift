@@ -91,19 +91,18 @@ oc apply -n ${test_mm_ns} -f  ${COMMON_MANIFESTS_HOME}/openvino-inference-servic
 check_pod_ready modelmesh-service=modelmesh-serving ${test_mm_ns}
 ~~~
 
-**Curl Test using HTTP**
+**Curl Test wit no authentication enabled**
 ~~~
-export Token=$(oc create token user-one -n ${test_mm_ns})
 export HOST_URL=$(oc get route example-onnx-mnist -ojsonpath='{.spec.host}' -n ${test_mm_ns})
 export HOST_PATH=$(oc get route example-onnx-mnist  -ojsonpath='{.spec.path}' -n ${test_mm_ns})
 
-curl  -H "Authorization: Bearer ${Token}" --silent --location --fail --show-error http://${HOST_URL}${HOST_PATH}/infer -d  @${COMMON_MANIFESTS_HOME}/input-onnx.json
+curl   --silent --location --fail --show-error --insecure https://${HOST_URL}${HOST_PATH}/infer -d  @${COMMON_MANIFESTS_HOME}/input-onnx.json
 ~~~
 
 
 ### HTTPS
 
-**Create a isvc using HTTPS**
+**Create a isvc with authentication enabled**
 ~~~
 oc delete project ${test_mm_ns}
 
