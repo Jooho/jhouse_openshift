@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+spec:
+  ports:
+    - name: minio-client-port
+      port: 9000
+      protocol: TCP
+      targetPort: 9000
+  selector:
+    app: minio
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: minio
+  name: minio
+spec:
+  containers:
+    - args:
+        - server
+        - /data1
+      env:
+        - name: MINIO_ROOT_USER
+          value:  THEACCESSKEY
+        - name: MINIO_ROOT_PASSWORD
+          value: cecbb494961bffd02fffd1f62468a01c8d12263b36913232fa3c68e4b1bf92bb
+      image: quay.io/opendatahub/modelmesh-minio-examples:caikit-flan-t5
+      imagePullPolicy: Always
+      name: minio
+      volumeMounts:
+        - name: minio-tls
+          mountPath: /home/modelmesh/.minio/certs
+  volumes:
+    - name: minio-tls
+      projected:
+        defaultMode: 420
+        sources:    
+        - secret:
+            items:
+            - key: public.crt
+              path: public.crt
+            - key: private.key
+              path: private.key
+            - key: public.crt
+              path: CAs/public.crt
+            name: minio-tls
