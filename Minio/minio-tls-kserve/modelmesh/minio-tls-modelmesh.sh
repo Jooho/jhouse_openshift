@@ -7,14 +7,21 @@ export SECRET_ACCESS_KEY=$(openssl rand -hex 32)
 export DOMAIN_NAME=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}' | awk -F'.' '{print $(NF-1)"."$NF}')
 export COMMON_NAME=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}'|sed 's/apps.//')
 
-export DEMO_HOME=/tmp/minio-2
-export BASE_CERT_DIR=/tmp/minio_certs-2
+if [[ ! -n $DEMO_HOME ]]
+then
+  export DEMO_HOME=/tmp/minio
+fi
+if [[ ! -n $BASE_CERT_DIR ]]
+then
+  export BASE_CERT_DIR=/tmp/minio_certs
+fi
 export DOMAIN_NAME=${MINIO_NS}.svc
 export COMMON_NAME=minio.${DOMAIN_NAME}
 
 # Clean Up
-rm -rf ${DEMO_HOME}
-rm -rf ${BASE_CERT_DIR}
+sudo rm -rf ${DEMO_HOME}
+sudo rm -rf ${BASE_CERT_DIR}
+oc delete ns ${MINIO_NS} --force --wait
 
 # Setup
 mkdir ${DEMO_HOME}
@@ -95,22 +102,16 @@ stringData:
 EOF
 
 # Generate Certificate
-openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 \
--subj "/O=Example Inc./CN=${DOMAIN_NAME}" \
--keyout $BASE_CERT_DIR/root.key \
--out $BASE_CERT_DIR/root.crt
+cat <<EOF> ${BASE_CERT_DIR}/openssl-san.config
+[ req ]
+distinguished_name = req
+[ san ]
+subjectAltName = DNS:minio.${MINIO_NS}.svc
+EOF
 
-openssl req -nodes -newkey rsa:2048 \
--subj "/CN=${COMMON_NAME}/O=Example Inc." \
--keyout $BASE_CERT_DIR/private.key \
--out $BASE_CERT_DIR/minio.csr
+openssl req -x509 -newkey rsa:4096 -sha256 -days 3560 -nodes -keyout ${BASE_CERT_DIR}/private.key -out ${BASE_CERT_DIR}/public.crt -subj '/CN=minio' -extensions san -config ${BASE_CERT_DIR}/openssl-san.config
 
-openssl x509 -req -days 365 -set_serial 0 \
--CA $BASE_CERT_DIR/root.crt \
--CAkey $BASE_CERT_DIR/root.key \
--in $BASE_CERT_DIR/minio.csr \
--out $BASE_CERT_DIR/public.crt
-
+cp $BASE_CERT_DIR/public.crt $BASE_CERT_DIR/AWS_CA_BUNDLE
 openssl x509 -in ${BASE_CERT_DIR}/public.crt -text
 
 # Deploy Minio
