@@ -59,7 +59,7 @@ cd jhouse_openshift/Minio/minio-tls-kserve/modelmesh
 
 ## Deploy Minio
 ~~~
-export CACERT=$(cat ${BASE_CERT_DIR}/root.crt | tr -d '\n' |sed 's/-----BEGIN CERTIFICATE-----/-----BEGIN CERTIFICATE-----\\\\n/g' |sed 's/-----E/\\\\n-----E/g')
+export CACERT=$(cat ${BASE_CERT_DIR}/public.crt | tr -d '\n' |sed 's/-----BEGIN CERTIFICATE-----/-----BEGIN CERTIFICATE-----\\\\n/g' |sed 's/-----E/\\\\n-----E/g')
 oc new-project ${MINIO_NS}
 
 oc create secret generic minio-tls --from-file=${BASE_CERT_DIR}/private.key --from-file=${BASE_CERT_DIR}/public.crt
