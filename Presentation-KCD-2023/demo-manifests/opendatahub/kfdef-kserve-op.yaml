@@ -1,0 +1,16 @@
+apiVersion: kfdef.apps.kubeflow.org/v1
+kind: KfDef
+metadata:
+  name: kserve
+  namespace: kserve
+spec:
+  applications:
+    - kustomizeConfig:
+        repoRef:
+          name: manifests
+          path: kserve
+      name: kserve
+  repos:
+    - name: manifests
+      uri: https://api.github.com/repos/opendatahub-io/odh-manifests/tarball/master
+  version: master
