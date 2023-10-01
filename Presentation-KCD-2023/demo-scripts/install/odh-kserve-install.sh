@@ -11,7 +11,7 @@ source "$(dirname "$(realpath "$0")")/../env.sh"
 source "$(dirname "$(realpath "$0")")/../utils.sh"
 
 echo
-echo "[INFO] Deploy KServe"
+info "[INFO] Deploy KServe"
 echo
 
 oc create -f ${DEMO_MANIFESTS_HOME}/opendatahub/kserve-dsc.yaml

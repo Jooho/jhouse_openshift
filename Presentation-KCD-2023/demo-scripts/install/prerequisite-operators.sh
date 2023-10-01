@@ -11,7 +11,7 @@ source "$(dirname "$(realpath "$0")")/../env.sh"
 source "$(dirname "$(realpath "$0")")/../utils.sh"
 
 echo
-echo "Let's install ServiceMesh, OpenDataHub and Serverless operators"
+info "Let's install ServiceMesh, OpenDataHub and Serverless operators"
 
 if [[ ! -d ${BASE_DIR} ]]
 then
@@ -25,7 +25,7 @@ fi
 
 # Install Service Mesh operators
 echo
-echo "[INFO] Install Service Mesh operators"
+light_info "[INFO] Install Service Mesh operators"
 echo
 oc apply -f ${DEMO_MANIFESTS_HOME}/service-mesh/operators.yaml
 
@@ -37,7 +37,7 @@ oc wait --for=condition=ready pod -l name=jaeger-operator -n openshift-operators
 oc wait --for=condition=ready pod -l name=kiali-operator -n openshift-operators --timeout=300s
 
 echo
-echo "[INFO] Install Serverless Operator"
+light_info "[INFO] Install Serverless Operator"
 echo
 oc apply -f ${DEMO_MANIFESTS_HOME}/serverless/operators.yaml
 wait_for_csv_installed serverless-operator openshift-serverless
@@ -51,7 +51,7 @@ oc wait --for=condition=ready pod -l name=knative-operator -n openshift-serverle
 
 # Deploy odh/rhods operator
 echo
-echo "[INFO] Deploy odh operator"
+light_info "[INFO] Deploy odh operator"
 echo
 OPERATOR_LABEL="control-plane=controller-manager"
 

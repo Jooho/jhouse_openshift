@@ -11,7 +11,7 @@ source "$(dirname "$(realpath "$0")")/../env.sh"
 source "$(dirname "$(realpath "$0")")/../utils.sh"
 
 echo
-echo "Let's create required CRs and required setup"
+info "Let's create required CRs and required setup"
 
 if [[ ! -d ${BASE_DIR} ]]
 then
@@ -25,7 +25,7 @@ fi
 
 # Create an istio instance
 echo
-echo "[INFO] Create an istio instance"
+light_info "[INFO] Create an istio instance"
 echo
 oc create ns istio-system -oyaml --dry-run=client | oc apply -f-
 oc::wait::object::availability "oc get project istio-system" 2 60
@@ -43,7 +43,7 @@ oc wait --for=condition=ready pod -l app=jaeger -n istio-system --timeout=300s
 
 # kserve/knative
 echo
-echo "[INFO]Update SMMR"
+light_info "[INFO]Update SMMR"
 echo
 oc create ns opendatahub -oyaml --dry-run=client | oc apply -f-
 oc::wait::object::availability "oc get project opendatahub" 2 60
@@ -51,13 +51,10 @@ oc create ns knative-serving -oyaml --dry-run=client | oc apply -f-
 oc::wait::object::availability "oc get project knative-serving" 2 60
 
 oc apply -f ${DEMO_MANIFESTS_HOME}/service-mesh/smmr-${TARGET_OPERATOR_TYPE}.yaml
-#oc apply -f ${DEMO_MANIFESTS_HOME}/service-mesh/peer-authentication.yaml
-#oc apply -f ${DEMO_MANIFESTS_HOME}/service-mesh/peer-authentication-${TARGET_OPERATOR_TYPE}.yaml 
-# we need this because of https://access.redhat.com/documentation/en-us/openshift_container_platform/4.12/html/serverless/serving#serverless-domain-mapping-custom-tls-cert_domain-mapping-custom-tls-cert
 
 # Create a Knative Serving installation
 echo
-echo "[INFO] Create a Knative Serving installation"
+light_info "[INFO] Create a Knative Serving installation"
 echo
 oc apply -f ${DEMO_MANIFESTS_HOME}/serverless/knativeserving-istio.yaml
 
@@ -86,7 +83,7 @@ export DOMAIN_NAME=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{
 export COMMON_NAME=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')
 
 echo
-echo "[INFO] Generate wildcard cert using openssl"
+light_info "[INFO] Generate wildcard cert using openssl"
 echo
 bash -x ${DEMO_SCRIPTS_HOME}/generate-wildcard-certs.sh ${BASE_CERT_DIR} ${DOMAIN_NAME} ${COMMON_NAME}
 

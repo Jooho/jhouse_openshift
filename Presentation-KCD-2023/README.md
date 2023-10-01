@@ -19,7 +19,7 @@ source init.sh
 
 cd ${DEMO_HOME}
 
-cp ${DEMO_MANIFESTS_HOME}/grpc_predict_v2.proto .
+cp ${DEMO_MANIFESTS_HOME}/kserve/grpc_predict_v2.proto ${DEMO_HOME}/.
 ~~~
 
 ## Install part
@@ -36,13 +36,14 @@ ${DEMO_SCRIPTS_HOME}/install/prerequisite-crs.sh
 
 **Install KServe**
 ~~~
-${DEMO_SCRIPTS_HOME}/install/prerequisite-crs.sh
+${DEMO_SCRIPTS_HOME}/install/odh-kserve-install.sh
 ~~~
 
 ## Demo 1 - how to deploy a model and how to inference by rest/grpc
 
-**Create default ServingRuntimes**
+**Create default ServingRuntimes in $TEST_NS(kserve-demo)**
 ~~~
+oc new-project $TEST_NS
 if [[ ! -d ${DEMO_HOME}/kserve ]];then
   cd ${DEMO_HOME}
   git clone https://github.com/kserve/kserve.git 
@@ -70,6 +71,8 @@ curl -k -X POST -H 'accept: application/json'    -H "Content-Type: application/j
 
 *gRPC call using port-forward*
 ~~~
+export MODEL_NAME=sklearn-iris-v2-rest
+
 oc port-forward deploy/${MODEL_NAME}-predictor-00001-deployment 9000:9000
 
 envsubst < "${DEMO_ISV_MANIFESTS_HOME}/sklearn-iris-v2-input-grpc-generic.json" | grpcurl -plaintext -proto ./grpc_predict_v2.proto -d @ localhost:9000 inference.GRPCInferenceService.ModelInfer
@@ -91,21 +94,18 @@ envsubst < "${DEMO_ISV_MANIFESTS_HOME}/sklearn-iris-v2-input-grpc-generic.json" 
 
 *Clean grpc isvc*
 ~~~
-oc delete isvc --all --force
+oc delete isvc,pod --all --force --grace-period=0
 ~~~
 
 ## Demo 2 - Scale to Zero
 
 **Deploy tensorflow model (flowers-sample)**
 ~~~
-export MODEL_NAME=flowers-sample
-oc create -f ${DEMO_ISV_MANIFESTS_HOME}/flowers-sample-v1.yaml
+export MODEL_NAME=tensorflow-flower-sample
+oc create -f ${DEMO_ISV_MANIFESTS_HOME}/tensorflow-flower-sample.yaml
 
 wait_for_pods_ready "serving.kserve.io/inferenceservice=${MODEL_NAME}" "${TEST_NS}"
 oc wait --for=condition=ready pod -l serving.kserve.io/inferenceservice=${MODEL_NAME} -n ${TEST_NS} --timeout=300s
-
-
-oc patch isvc/${MODEL_NAME}  -p '{"spec":{"predictor": {"minReplicas": 0}}}' -n ${TEST_NS} --type merge
 ~~~
 
 **Verify model is working**
@@ -127,12 +127,16 @@ curl  -k -X POST -H 'accept: application/json'    -H "Content-Type: application/
     ]
 }
 
+oc patch isvc/${MODEL_NAME}  -p '{"spec":{"predictor": {"minReplicas": 0}}}' -n ${TEST_NS} --type merge
+oc get pod -w -n ${TEST_NS}
 ## around 60s~100s, it starts to scale down
 ~~~
 
 
 **Send a request to see it is starting**
 ~~~
+# Watch pods 
+# oc get pod -w -n ${TEST_NS}
 INPUT_DATA=${DEMO_ISV_MANIFESTS_HOME}/tensorflow-v1-input-rest-rose.json
 
 curl -k -X POST -H 'accept: application/json' -H "Content-Type: application/json" -d @${INPUT_DATA}  ${ISVC_URL}/v1/models/$MODEL_NAME:predict
@@ -152,6 +156,11 @@ If you want to control the time to keep pod running before scaling down to zero,
 Refer [this doc](https://knative.dev/docs/serving/autoscaling/scale-to-zero/#scale-to-zero-last-pod-retention-period)
 
 
+*Clean isvc*
+~~~
+oc delete isvc,pod --all --force --grace-period=0
+~~~
+
 ## Demo 3 - Autoscaling management
 
 - Metrics type: [concurrency](https://knative.dev/docs/serving/autoscaling/concurrency/) and [rps](https://knative.dev/docs/serving/autoscaling/rps-target/)
@@ -169,71 +178,98 @@ Refer [this doc](https://knative.dev/docs/serving/autoscaling/scale-to-zero/#sca
 - Max
   - `{"spec":{"predictor":{"maxReplicas"}}}` can set maximum pod counts.
 
+**Deploy tensorflow model (flowers-sample)**
+~~~
+export MODEL_NAME=tensorflow-flower-sample
+oc create -f ${DEMO_ISV_MANIFESTS_HOME}/tensorflow-flower-sample.yaml
+
+wait_for_pods_ready "serving.kserve.io/inferenceservice=${MODEL_NAME}" "${TEST_NS}"
+oc wait --for=condition=ready pod -l serving.kserve.io/inferenceservice=${MODEL_NAME} -n ${TEST_NS} --timeout=300s
+~~~
 
 **Load testing to verify AutoScaling**
-  ~~~
-  # setup.sh download the hey binary but if you don't have it, use the following commands:
-  # wget https://hey-release.s3.us-east-2.amazonaws.com/hey_linux_amd64
-  # chmod 777 hey_linux_amd64
-  # sudo mv hey_linux_amd64 /usr/local/bin/hey
-  
-  hey -z 1s -c 5 -m POST -D $INPUT_DATA ${ISVC_URL}/v1/models/$MODEL_NAME:predict
+~~~
+# setup.sh download the hey binary but if you don't have it, use the following commands:
+# wget https://hey-release.s3.us-east-2.amazonaws.com/hey_linux_amd64
+# chmod 777 hey_linux_amd64
+# sudo mv hey_linux_amd64 /usr/local/bin/hey
+oc patch isvc ${MODEL_NAME} -n ${TEST_NS} --type json -p '[{"op": "add", "path": "/spec/predictor/scaleTarget", "value": 1}]'
+oc patch isvc ${MODEL_NAME} -n ${TEST_NS} --type json -p '[{"op": "add", "path": "/spec/predictor/scaleMetric", "value": "concurrency"}]'
 
-  ❯ oc get pod
-    NAME                                                        READY   STATUS            RESTARTS   AGE
-    flowers-sample-predictor-00001-deployment-554bb59d5-2wx72   3/3     Running           0          13s
-    flowers-sample-predictor-00001-deployment-554bb59d5-lbqqr   0/3     PodInitializing   0          15s
-    flowers-sample-predictor-00001-deployment-554bb59d5-lgg55   0/3     Init:0/1          0          1s
-    flowers-sample-predictor-00001-deployment-554bb59d5-mn4wv   3/3     Running           0          3m9s
-    flowers-sample-predictor-00001-deployment-554bb59d5-wvsdw   0/3     Init:0/1          0          1s
-  ~~~
+# Cleanup previous pods.
+for i in {1..2}; do oc delete revision tensorflow-flower-sample-predictor-0000${i};  oc delete pod -l serving.knative.dev/revision=tensorflow-flower-sample-predictor-0000${i} --force --grace-period=0; done
+
+hey -z 1s -c 5 -m POST -D $INPUT_DATA ${ISVC_URL}/v1/models/$MODEL_NAME:predict
+
+❯ oc get pod
+  NAME                                                        READY   STATUS            RESTARTS   AGE
+  flowers-sample-predictor-00003-deployment-554bb59d5-2wx72   3/3     Running           0          13s
+  flowers-sample-predictor-00003-deployment-554bb59d5-lbqqr   0/3     PodInitializing   0          15s
+  flowers-sample-predictor-00003-deployment-554bb59d5-lgg55   0/3     Init:0/1          0          1s
+  flowers-sample-predictor-00003-deployment-554bb59d5-mn4wv   3/3     Running           0          3m9s
+  flowers-sample-predictor-00003-deployment-554bb59d5-wvsdw   0/3     Init:0/1          0          1s
+~~~
   This will scale out to unlimited.
 
 **Set maximum pods**
 
-  Only 2 pods will be created maximum with this change.
-  ~~~
-  oc patch isvc ${MODEL_NAME} -p '{"spec":{"predictor":{"maxReplicas":2}}}' --type=merge
+Only 2 pods will be created maximum with this change.
+~~~
+oc patch isvc ${MODEL_NAME} -p '{"spec":{"predictor":{"maxReplicas":2}}}' --type=merge
 
-  # Cleanup previous revision.
-  oc delete revision flowers-sample-predictor-00001
-  oc delete pod -l serving.knative.dev/revision=flowers-sample-predictor-00001 --force --grace-period=0
+# Cleanup previous pods.
+for i in {3..3}; do oc delete revision tensorflow-flower-sample-predictor-0000${i};  oc delete pod -l serving.knative.dev/revision=tensorflow-flower-sample-predictor-0000${i} --force --grace-period=0; done
 
-  # Retest
-  hey -z 3s -c 5 -m POST -D $INPUT_DATA ${ISVC_URL}/v1/models/$MODEL_NAME:predict
+# Retest
+hey -z 1s -c 5 -m POST -D $INPUT_DATA ${ISVC_URL}/v1/models/$MODEL_NAME:predict
 
-  ❯ oc get pod
-    NAME                                                         READY   STATUS     RESTARTS   AGE
-    flowers-sample-predictor-00002-deployment-7687c9cd5c-5m57h   3/3     Running    0          61s
-    flowers-sample-predictor-00002-deployment-7687c9cd5c-cqws8   0/3     Init:0/1   0          7s
-  ~~~
+❯ oc get pod
+  NAME                                                         READY   STATUS     RESTARTS   AGE
+  flowers-sample-predictor-00002-deployment-7687c9cd5c-5m57h   3/3     Running    0          61s
+  flowers-sample-predictor-00002-deployment-7687c9cd5c-cqws8   0/3     Init:0/1   0          7s
+~~~
 
 **Set hard limits**
 
-  ~~~
-  # With default value : unlimited
-  hey -z 1s -c 80 -m POST -D $INPUT_DATA ${ISVC_URL}/v1/models/$MODEL_NAME:predict
+~~~
+# With default value : unlimited
+oc patch isvc ${MODEL_NAME} -n ${TEST_NS} --type json -p '[{"op": "replace", "path": "/spec/predictor/maxReplicas","value": 1}]'
+for i in {4..4}; do oc delete revision tensorflow-flower-sample-predictor-0000${i};  oc delete pod -l serving.knative.dev/revision=tensorflow-flower-sample-predictor-0000${i} --force --grace-period=0; done
 
-  oc patch isvc ${MODEL_NAME} -p '{"spec":{"predictor":{"containerConcurrency":1}}}' --type=merge
+hey -z 1s -c 10 -m POST -D $INPUT_DATA ${ISVC_URL}/v1/models/$MODEL_NAME:predict
+Summary:
+  Total:	2.9956 secs
+  Slowest:	2.9941 secs
+  Fastest:	2.1912 secs
+  Average:	2.5006 secs
+  Requests/sec:	3.3382
 
-  # Cleanup previous revision.
-  oc delete revision flowers-sample-predictor-00001
-  oc delete pod -l serving.knative.dev/revision=flowers-sample-predictor-00001 --force --grace-period=0
+oc patch isvc ${MODEL_NAME} -p '{"spec":{"predictor":{"containerConcurrency":1}}}' --type=merge
 
-  # Retest
-  hey -z 1s -c 80 -m POST -D $INPUT_DATA ${ISVC_URL}/v1/models/$MODEL_NAME:predict
+# Cleanup previous pods.
+for i in {5..5}; do oc delete revision tensorflow-flower-sample-predictor-0000${i};  oc delete pod -l serving.knative.dev/revision=tensorflow-flower-sample-predictor-0000${i} --force --grace-period=0; done
 
-  ❯ oc get pod
-    NAME                                                         READY   STATUS     RESTARTS   AGE
-    flowers-sample-predictor-00002-deployment-7687c9cd5c-5m57h   3/3     Running    0          61s
-    flowers-sample-predictor-00002-deployment-7687c9cd5c-cqws8   0/3     Init:0/1   0          7s
-  ~~~
+# Retest
+hey -z 1s -c 10 -m POST -D $INPUT_DATA ${ISVC_URL}/v1/models/$MODEL_NAME:predict
+Summary:
+  Total:	4.1731 secs
+  Slowest:	3.5072 secs
+  Fastest:	0.3623 secs
+  Average:	2.1276 secs
+  Requests/sec:	3.1152
 
-## Demo 4 - Canary Deployment, Rollback, Revision Management
+
+❯ oc get pod
+  NAME                                                         READY   STATUS     RESTARTS   AGE
+  flowers-sample-predictor-00002-deployment-7687c9cd5c-5m57h   3/3     Running    0          61s
+  flowers-sample-predictor-00002-deployment-7687c9cd5c-cqws8   0/3     Init:0/1   0          7s
+~~~
+
 **Clean**
 ~~~
-oc delete revision,isvc --all --force --grace-period=0
+oc delete isvc,revision,pod --all --force --grace-period=0
 ~~~
+## Demo 4 - Canary Deployment, Rollback, Revision Management
 
 **Deploy sklean model for restful call**
 ~~~
@@ -389,23 +425,15 @@ oc get configmap config-gc -n knative-serving -o yaml
 ## Optional
 
 
-
-
 **Deploy sample flan-t5 LLM with Caikit**
 ~~~
 ${DEMO_SCRIPTS_HOME}/test/deploy-model.sh
 ~~~
 
-
-
 **Test inference service for sample flan-t5 LLM**
 ~~~
 ${DEMO_SCRIPTS_HOME}/test/grpc-call.sh
 ~~~
-
-
-
-
 
 **Uninstall KServe**
 ~~~
