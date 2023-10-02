@@ -11,7 +11,7 @@ spec:
       name: kiali
       enabled: true
     prometheus:
-      enabled: false
+      enabled: true
     jaeger: 
       name: jaeger
   security:
