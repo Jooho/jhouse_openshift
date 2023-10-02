@@ -7,13 +7,11 @@
 **Pre-resuisite steps & check**
 It assumes that you are in the jhouse_openshift repository (Presentation-KCD-2023 folder)
 ~~~
-#git clone git@github.com:Jooho/jhouse_openshift.git
-cd  /home/jooho/dev/git
+git clone git@github.com:Jooho/jhouse_openshift.git
 
 cd jhouse_openshift/Presentation-KCD-2023
 
-# env-setup-scripts/setup.sh
-env-setup-scripts/setup.sh /home/jooho/dev/git/jhouse_openshift
+env-setup-scripts/setup.sh
 
 source init.sh
 
