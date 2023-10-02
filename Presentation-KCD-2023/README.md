@@ -197,6 +197,9 @@ oc patch isvc ${MODEL_NAME} -n ${TEST_NS} --type json -p '[{"op": "add", "path":
 # Cleanup previous pods.
 for i in {1..2}; do oc delete revision tensorflow-flower-sample-predictor-0000${i};  oc delete pod -l serving.knative.dev/revision=tensorflow-flower-sample-predictor-0000${i} --force --grace-period=0; done
 
+ISVC_URL=$(oc get isvc ${MODEL_NAME} -ojsonpath='{.status.url}')
+INPUT_DATA=${DEMO_ISV_MANIFESTS_HOME}/tensorflow-v1-input-rest-daisy.json
+
 hey -z 1s -c 5 -m POST -D $INPUT_DATA ${ISVC_URL}/v1/models/$MODEL_NAME:predict
 
 ❯ oc get pod
