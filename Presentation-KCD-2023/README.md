@@ -64,6 +64,7 @@ oc wait --for=condition=ready pod -l serving.kserve.io/inferenceservice=${MODEL_
 *Rest call*
 ~~~
 ISVC_URL=$(oc get isvc ${MODEL_NAME} -ojsonpath='{.status.url}')
+
 curl -k -X POST -H 'accept: application/json'    -H "Content-Type: application/json"   -d @${DEMO_ISV_MANIFESTS_HOME}/sklearn-iris-v2-input-rest.json   ${ISVC_URL}/v2/models/${MODEL_NAME}/infer
 ~~~
 
@@ -87,6 +88,7 @@ oc wait --for=condition=ready pod -l serving.kserve.io/inferenceservice=${MODEL_
 
 ~~~
 export ISVC_URL=$(oc get isvc ${MODEL_NAME} -ojsonpath='{.status.url}' |awk -F'https://' '{print $2}')
+
 envsubst < "${DEMO_ISV_MANIFESTS_HOME}/sklearn-iris-v2-input-grpc-generic.json" | grpcurl  -insecure   -proto ./grpc_predict_v2.proto   -d @  ${ISVC_URL}:443   inference.GRPCInferenceService.ModelInfer 
 ~~~
 
@@ -115,6 +117,10 @@ ISVC_URL=$(oc get isvc ${MODEL_NAME} -ojsonpath='{.status.url}')
 INPUT_DATA=${DEMO_ISV_MANIFESTS_HOME}/tensorflow-v1-input-rest-daisy.json
 
 curl  -k -X POST -H 'accept: application/json'    -H "Content-Type: application/json"   -d @${INPUT_DATA}  ${ISVC_URL}/v1/models/$MODEL_NAME:predict
+~~~
+
+- Sample output
+~~~
 {
     "predictions": [
         {
@@ -124,12 +130,14 @@ curl  -k -X POST -H 'accept: application/json'    -H "Content-Type: application/
         }
     ]
 }
+~~~
 
+**Set minReplicas to 0 for ScaleToZero**
+~~~
 oc patch isvc/${MODEL_NAME}  -p '{"spec":{"predictor": {"minReplicas": 0}}}' -n ${TEST_NS} --type merge
 oc get pod -w -n ${TEST_NS}
 ## around 60s~100s, it starts to scale down
 ~~~
-
 
 **Send a request to see it is starting**
 ~~~
