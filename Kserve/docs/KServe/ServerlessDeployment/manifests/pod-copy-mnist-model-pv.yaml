@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "pvc-init"
+spec:
+  template:
+    metadata:
+      name: "pvc-init-pod"
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: "copy-pod"
+          image: quay.io/jooholee/modelmesh-minio-examples:latest
+          securityContext:
+            allowPrivilegeEscalation: false
+          command: ["/bin/sh", "-ex", "-c"]
+          args:
+            - echo copy model files ...;
+              whoami;
+              ls -al "${SRC_FOLDER}";
+              cp -r "${SRC_FOLDER}"/* "${DST_FOLDER_1}" &&
+              ls -al "${DST_FOLDER_1}" &&
+              echo done &&
+              exit 0;
+          env:
+            - name: SRC_FOLDER
+              value: "/data1/modelmesh-example-models/onnx"
+            - name: DST_FOLDER_1
+              value: "/mnt/models"
+          volumeMounts:
+            - mountPath: "/mnt/models"
+              name: model-store
+      volumes:
+        - name: model-store
+          persistentVolumeClaim:
+            claimName: task-pv-claim
+  backoffLimit: 4

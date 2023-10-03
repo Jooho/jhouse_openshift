@@ -13,7 +13,7 @@ then
 fi
 if [[ ! -n $BASE_CERT_DIR ]]
 then
-  export BASE_CERT_DIR=/tmp/minio_certs
+  export BASE_CERT_DIR=/tmp/minio/minio_certs
 fi
 export DOMAIN_NAME=${MINIO_NS}.svc
 export COMMON_NAME=minio.${DOMAIN_NAME}

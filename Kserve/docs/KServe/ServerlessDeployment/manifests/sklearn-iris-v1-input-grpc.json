@@ -1,5 +1,5 @@
 {
-  "model_name": "sklearn-irisv2-grpc",
+  "model_name": "sklearn-iris-v2-grpc",
   "inputs": [
     {
       "name": "input-0",

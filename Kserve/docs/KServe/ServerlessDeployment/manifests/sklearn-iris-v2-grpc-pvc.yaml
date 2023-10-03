@@ -1,0 +1,23 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  annotations:
+    serving.knative.openshift.io/enablePassthrough: "true"
+    sidecar.istio.io/inject: "true"
+    sidecar.istio.io/rewriteAppHTTPProbers: "true"
+  generation: 1
+  name: sklearn-iris-v2-grpc-pvc
+  namespace: kserve-demo
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: sklearn
+      name: ""
+      resources: {}
+      runtime: kserve-mlserver
+      storageUri: "pvc://${PVC_NAME}/model.joblib"
+      ports:
+        - containerPort: 9000
+          name: h2c
+          protocol: TCP

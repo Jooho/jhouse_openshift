@@ -12,9 +12,10 @@ export DOMAIN_NAME=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{
 export COMMON_NAME=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}'|sed 's/apps.//')
 
 export DEMO_HOME=/tmp/minio
-export BASE_CERT_DIR=/tmp/minio_certs
+export BASE_CERT_DIR=/tmp/minio/minio_certs
 export DOMAIN_NAME=${MINIO_NS}.svc
 export COMMON_NAME=minio.${DOMAIN_NAME}
+mkdir ${DEMO_HOME}
 mkdir ${BASE_CERT_DIR}
 ~~~
 
@@ -37,6 +38,18 @@ openssl x509 -req -days 365 -set_serial 0 \
 -out $BASE_CERT_DIR/public.crt
 
 openssl x509 -in ${BASE_CERT_DIR}/public.crt -text
+~~~
+
+## Generate SAN TLS Cert using openssl
+~~~
+cat <<EOF> ${BASE_CERT_DIR}/openssl-san.config
+[ req ]
+distinguished_name = req
+[ san ]
+subjectAltName = DNS:minio.${MINIO_NS}.svc
+EOF
+
+openssl req -x509 -newkey rsa:4096 -sha256 -days 3560 -nodes -keyout ${BASE_CERT_DIR}/private.key -out ${BASE_CERT_DIR}/public.crt -subj '/CN=minio' -extensions san -config ${BASE_CERT_DIR}/openssl-san.config
 ~~~
 
 ## Generate TLS Cert using playbook (another way)

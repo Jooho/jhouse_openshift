@@ -6,7 +6,7 @@ metadata:
     sidecar.istio.io/inject: "true"
     sidecar.istio.io/rewriteAppHTTPProbers: "true"
   generation: 1
-  name: sklearn-irisv2-grpc
+  name: sklearn-iris-v2-rest
   namespace: kserve-demo
 spec:
   predictor:
@@ -17,7 +17,3 @@ spec:
       resources: {}
       runtime: kserve-mlserver
       storageUri: gs://seldon-models/sklearn/mms/lr_model
-      ports:
-        - containerPort: 9000
-          name: h2c
-          protocol: TCP

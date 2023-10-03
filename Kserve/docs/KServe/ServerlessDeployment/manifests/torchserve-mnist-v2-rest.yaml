@@ -1,0 +1,15 @@
+apiVersion: "serving.kserve.io/v1beta1"
+kind: "InferenceService"
+metadata:
+  annotations:
+    serving.knative.openshift.io/enablePassthrough: "true"
+    sidecar.istio.io/inject: "true"
+    sidecar.istio.io/rewriteAppHTTPProbers: "true"
+  name: "torchserve-mnist-v2-rest"
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: pytorch
+      protocolVersion: v2
+      storageUri: "gs://kfserving-examples/models/torchserve/image_classifier"

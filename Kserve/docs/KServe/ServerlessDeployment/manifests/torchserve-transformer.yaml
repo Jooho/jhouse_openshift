@@ -1,0 +1,26 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  annotations:
+    serving.knative.openshift.io/enablePassthrough: "true"
+    sidecar.istio.io/inject: "true"
+    sidecar.istio.io/rewriteAppHTTPProbers: "true"
+  name: torch-transformer
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: pytorch
+      storageUri: gs://kfserving-examples/models/torchserve/image_classifier/v1
+  transformer:
+    containers:
+      - image: kserve/image-transformer:latest
+        name: kserve-container
+        command:
+          - "python"
+          - "-m"
+          - "model"
+        args:
+          - --model_name
+          - mnist
+        imagePullPolicy: Always
