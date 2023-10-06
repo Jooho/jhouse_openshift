@@ -6,6 +6,7 @@ set -o errtrace
 # set -x   #Uncomment this to debug script.
 
 source "$(dirname "$(realpath "$0")")/../env.sh"
+source "$(dirname "$(realpath "$0")")/../utils.sh"
 
 # Remove test namespace from SMMR
 INDEX=$(oc get servicemeshmemberroll/default -n istio-system -o jsonpath='{.spec.members[*]}')

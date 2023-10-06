@@ -5,6 +5,7 @@ set -o errtrace
 # set -x   #Uncomment this to debug script.
 
 source "$(dirname "$(realpath "$0")")/../env.sh"
+source "$(dirname "$(realpath "$0")")/../utils.sh"
 
 # Deploy Minio
 ACCESS_KEY_ID=THEACCESSKEY
@@ -49,3 +50,4 @@ else
 fi
 
 success "[SUCCESS] Successfully deployed flan-t5 model" 
+${DEMO_SCRIPTS_HOME}/test/deploy-model.sh

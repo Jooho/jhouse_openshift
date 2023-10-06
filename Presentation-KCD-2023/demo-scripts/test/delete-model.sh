@@ -5,6 +5,7 @@ set -o errtrace
 # set -x   #Uncomment this to debug script.
 
 source "$(dirname "$(realpath "$0")")/../env.sh"
+source "$(dirname "$(realpath "$0")")/../utils.sh"
 
 oc delete isvc --all -n ${TEST_NS} --force --grace-period=0
 oc delete ns ${TEST_NS} ${MINIO_NS}

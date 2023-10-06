@@ -5,6 +5,7 @@ set -o errtrace
 # set -x   #Uncomment this to debug script.
 
 source "$(dirname "$(realpath "$0")")/../env.sh"
+source "$(dirname "$(realpath "$0")")/../utils.sh"
 
 # Delete the Knative gateways
 oc delete -f ${DEMO_MANIFESTS_HOME}/serverless/gateways.yaml
