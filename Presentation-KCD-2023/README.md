@@ -144,8 +144,11 @@ oc get pod -w -n ${TEST_NS}
 # Watch pods 
 # oc get pod -w -n ${TEST_NS}
 INPUT_DATA=${DEMO_ISV_MANIFESTS_HOME}/tensorflow-v1-input-rest-rose.json
-
 curl -k -X POST -H 'accept: application/json' -H "Content-Type: application/json" -d @${INPUT_DATA}  ${ISVC_URL}/v1/models/$MODEL_NAME:predict
+~~~
+
+- Sample output
+~~~
 {
     "predictions": [
         {
@@ -209,8 +212,11 @@ ISVC_URL=$(oc get isvc ${MODEL_NAME} -ojsonpath='{.status.url}')
 INPUT_DATA=${DEMO_ISV_MANIFESTS_HOME}/tensorflow-v1-input-rest-daisy.json
 
 hey -z 1s -c 5 -m POST -D $INPUT_DATA ${ISVC_URL}/v1/models/$MODEL_NAME:predict
+~~~
 
-❯ oc get pod
+- Sample output
+~~~
+oc get pod
   NAME                                                        READY   STATUS            RESTARTS   AGE
   flowers-sample-predictor-00003-deployment-554bb59d5-2wx72   3/3     Running           0          13s
   flowers-sample-predictor-00003-deployment-554bb59d5-lbqqr   0/3     PodInitializing   0          15s
@@ -218,7 +224,7 @@ hey -z 1s -c 5 -m POST -D $INPUT_DATA ${ISVC_URL}/v1/models/$MODEL_NAME:predict
   flowers-sample-predictor-00003-deployment-554bb59d5-mn4wv   3/3     Running           0          3m9s
   flowers-sample-predictor-00003-deployment-554bb59d5-wvsdw   0/3     Init:0/1          0          1s
 ~~~
-  This will scale out to unlimited.
+This will scale out to unlimited.
 
 **Set maximum pods**
 
@@ -231,7 +237,10 @@ for i in {3..3}; do oc delete revision tensorflow-flower-sample-predictor-0000${
 
 # Retest
 hey -z 1s -c 5 -m POST -D $INPUT_DATA ${ISVC_URL}/v1/models/$MODEL_NAME:predict
+~~~
 
+- Sample output
+~~~
 ❯ oc get pod
   NAME                                                         READY   STATUS     RESTARTS   AGE
   flowers-sample-predictor-00002-deployment-7687c9cd5c-5m57h   3/3     Running    0          61s
@@ -246,13 +255,20 @@ oc patch isvc ${MODEL_NAME} -n ${TEST_NS} --type json -p '[{"op": "replace", "pa
 for i in {4..4}; do oc delete revision tensorflow-flower-sample-predictor-0000${i};  oc delete pod -l serving.knative.dev/revision=tensorflow-flower-sample-predictor-0000${i} --force --grace-period=0; done
 
 hey -z 1s -c 10 -m POST -D $INPUT_DATA ${ISVC_URL}/v1/models/$MODEL_NAME:predict
+~~~
+
+- Sample output
+~~~
 Summary:
   Total:	2.9956 secs
   Slowest:	2.9941 secs
   Fastest:	2.1912 secs
   Average:	2.5006 secs
   Requests/sec:	3.3382
+~~~
 
+**patch containerConcurrency**
+~~~
 oc patch isvc ${MODEL_NAME} -p '{"spec":{"predictor":{"containerConcurrency":1}}}' --type=merge
 
 # Cleanup previous pods.
@@ -260,13 +276,16 @@ for i in {5..5}; do oc delete revision tensorflow-flower-sample-predictor-0000${
 
 # Retest
 hey -z 1s -c 10 -m POST -D $INPUT_DATA ${ISVC_URL}/v1/models/$MODEL_NAME:predict
+~~~
+
+- Sample output
+~~~
 Summary:
   Total:	4.1731 secs
   Slowest:	3.5072 secs
   Fastest:	0.3623 secs
   Average:	2.1276 secs
   Requests/sec:	3.1152
-
 
 ❯ oc get pod
   NAME                                                         READY   STATUS     RESTARTS   AGE
