@@ -1,0 +1,140 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  creationTimestamp: "2024-07-29T04:36:36Z"
+  generation: 4
+  labels:
+    app.kubernetes.io/component: inference-server
+    app.kubernetes.io/instance: mpis-example
+    app.kubernetes.io/name: multi-pod-inference-servers
+    mpis/instance: mpis-example-llama-3-8b-instruct-asdf
+    mpis/model-id: llama-3-8b-instruct
+    mpis/role: worker
+  name: mpis-example-llama-3-8b-instruct-asdf-worker
+  namespace: vllm-llama3-8b
+  resourceVersion: "23816608"
+  uid: 49f69ee9-3b9a-4cb2-97c5-3990bf914c52
+spec:
+  minReadySeconds: 5
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  podManagementPolicy: Parallel
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: inference-server
+      app.kubernetes.io/instance: mpis-example
+      app.kubernetes.io/name: multi-pod-inference-servers
+      mpis/instance: mpis-example-llama-3-8b-instruct-asdf
+      mpis/model-id: llama-3-8b-instruct
+      mpis/role: worker
+  serviceName: mpis-example-pods
+  template:
+    metadata:
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "3000"
+        prometheus.io/scrape: "true"
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/component: inference-server
+        app.kubernetes.io/instance: mpis-example
+        app.kubernetes.io/name: multi-pod-inference-servers
+        mpis/instance: mpis-example-llama-3-8b-instruct-asdf
+        mpis/model-id: llama-3-8b-instruct
+        mpis/role: worker
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: nvidia.com/gpu.product
+                operator: In
+                values:
+                - NVIDIA-A10G
+      containers:
+      - args:
+        - |
+          # pod address must include the "subdomain" (name of headless service)
+          #   https://stackoverflow.com/questions/59258223/how-to-resolve-pod-hostnames-from-other-pods
+          # Without specifying --node-ip-address it defaults to localhost
+          until ray start --address="${SERVICENAME}:6379" --node-ip-address ${POD_IP}; do
+            echo "Waiting..."
+            sleep 1
+          done
+          ray status
+          exec sleep infinity
+        command:
+        - bash
+        - -c
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        - name: SERVICENAME
+          value: mpis-example-pods
+        image: quay.io/opendatahub/vllm@sha256:7f19dde68eb47abeea155f0d68d4e708f4d93cc91fc632b7a5a0de181d8d193b
+        imagePullPolicy: Always
+        name: server
+        resources:
+          limits:
+            cpu: "16"
+            memory: 48Gi
+            nvidia.com/gpu: "1"
+          requests:
+            cpu: "8"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /dev/shm
+          name: shm
+        - mountPath: /llama_3_storage
+          name: llama-3-pvc
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      priorityClassName: system-node-critical
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 2
+      tolerations:
+      - effect: NoSchedule
+        key: multi-node-inference
+        operator: Equal
+        value: "true"
+      volumes:
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 12Gi
+        name: shm
+      - name: llama-3-pvc
+        persistentVolumeClaim:
+          claimName: llama-3-8b-pvc-2
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate
+status:
+  availableReplicas: 1
+  collisionCount: 0
+  currentReplicas: 1
+  currentRevision: mpis-example-llama-3-8b-instruct-asdf-worker-7bb8b99b7b
+  observedGeneration: 4
+  readyReplicas: 1
+  replicas: 1
+  updateRevision: mpis-example-llama-3-8b-instruct-asdf-worker-7bb8b99b7b
+  updatedReplicas: 1

@@ -1,0 +1,476 @@
+---
+# Service enabling Pod/IP discovery only, do not use for routing inference
+# requests
+#
+# There only needs to be one such Service, regardless of the number of
+# models/instances
+apiVersion: v1
+kind: Service
+metadata:
+  # MUST match serviceName of the StatefulSet(s)
+  name: mpis-example-pods
+  namespace: vllm-llama3-8b
+  labels:
+    app.kubernetes.io/name: multi-pod-inference-servers
+    app.kubernetes.io/instance: mpis-example
+    app.kubernetes.io/component: service-discovery
+spec:
+  clusterIP: None
+  # need addresses to resolve during bootstrap before pods are Ready for service
+  # discovery
+  publishNotReadyAddresses: True
+  selector:
+    app.kubernetes.io/name: multi-pod-inference-servers
+    app.kubernetes.io/instance: mpis-example
+    app.kubernetes.io/component: inference-server
+
+---
+# Service per-model for inference request routing across instances of the model
+apiVersion: v1
+kind: Service
+metadata:
+  name: mpis-example-llama-3-8b-instruct
+  namespace: vllm-llama3-8b  
+  labels:
+    app.kubernetes.io/name: multi-pod-inference-servers
+    app.kubernetes.io/instance: mpis-example
+    app.kubernetes.io/component: inference-server
+    mpis/model-id: llama-3-8b-instruct
+spec:
+  clusterIP: None
+  ports:
+  - name: grpc
+    port: 8033
+  - name: http
+    port: 3000
+  selector:
+    app.kubernetes.io/name: multi-pod-inference-servers
+    app.kubernetes.io/instance: mpis-example
+    app.kubernetes.io/component: inference-server
+    mpis/model-id: llama-3-8b-instruct
+    mpis/role: leader
+
+---
+# For each instance of a multi-pod inference server, we will need a
+# NetworkPolicy to limit traffic since torch.distributed does not support
+# encryption or authentication...
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mpis-example-llama-3-8b-instruct-asdf
+  namespace: vllm-llama3-8b  
+  labels:
+    app.kubernetes.io/name: multi-pod-inference-servers
+    app.kubernetes.io/instance: mpis-example
+    app.kubernetes.io/component: inference-server
+    mpis/instance: mpis-example-llama-3-8b-instruct-asdf
+    mpis/model-id: llama-3-8b-instruct
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: multi-pod-inference-servers
+      app.kubernetes.io/instance: mpis-example
+      app.kubernetes.io/component: inference-server
+      mpis/instance: mpis-example-llama-3-8b-instruct-asdf
+      mpis/model-id: llama-3-8b-instruct
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  # ingress traffic between statefulset pods
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: vllm-llama3-8b
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: multi-pod-inference-servers
+          app.kubernetes.io/instance: mpis-example
+          app.kubernetes.io/component: inference-server
+          mpis/instance: mpis-example-llama-3-8b-instruct-asdf
+          mpis/model-id: llama-3-8b-instruct
+  # ingress traffic to inference port
+  # TODO: use `from` to limit to allowed clients
+  - ports:
+    - protocol: TCP
+      port: 8033
+    - protocol: TCP
+      port: 3000
+  egress:
+  # egress traffic between StatefulSet pods
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: vllm-llama3-8b
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: multi-pod-inference-servers
+          app.kubernetes.io/instance: mpis-example
+          app.kubernetes.io/component: inference-server
+          mpis/instance: mpis-example-llama-3-8b-instruct-asdf
+          mpis/model-id: llama-3-8b-instruct
+  # allow use of Kube DNS
+  - to:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: openshift-dns
+      podSelector:
+        matchLabels:
+          dns.operator.openshift.io/daemonset-dns: default
+    ports:
+    # DNS pods listen on 5353
+    - protocol: UDP
+      port: 5353
+    - protocol: TCP
+      port: 5353
+
+---
+# For each instance of a multi-pod inference server, create a StatefulSet for
+# the leader pod that runs vLLM
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mpis-example-llama-3-8b-instruct-asdf-leader
+  namespace: vllm-llama3-8b  
+  labels:
+    app.kubernetes.io/name: multi-pod-inference-servers
+    app.kubernetes.io/instance: mpis-example
+    app.kubernetes.io/component: inference-server
+    mpis/instance: mpis-example-llama-3-8b-instruct-asdf
+    mpis/model-id: llama-3-8b-instruct
+    mpis/role: leader
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: multi-pod-inference-servers
+      app.kubernetes.io/instance: mpis-example
+      app.kubernetes.io/component: inference-server
+      mpis/instance: mpis-example-llama-3-8b-instruct-asdf
+      mpis/model-id: llama-3-8b-instruct
+      mpis/role: leader
+  # MUST match name of the Service
+  serviceName: mpis-example-pods
+  # update pods at the same time instead of being ordered
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: RollingUpdate
+    # maxUnavailable is only alpha in Kube v1.24 and requires a feature gate... so this has no effect
+    # REF: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#maximum-unavailable-pods
+    rollingUpdate:
+      maxUnavailable: 100%
+  replicas: 1
+  minReadySeconds: 5
+  progressDeadlineSeconds: 600
+  revisionHistoryLimit: 10
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: multi-pod-inference-servers
+        app.kubernetes.io/instance: mpis-example
+        app.kubernetes.io/component: inference-server
+        mpis/instance: mpis-example-llama-3-8b-instruct-asdf
+        mpis/model-id: llama-3-8b-instruct
+        mpis/role: leader
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "3000"
+        prometheus.io/scrape: "true"
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: nvidia.com/gpu.product
+                operator: In
+                values:
+                - NVIDIA-A10G
+      # REMOVME: specific to the BAM-cluster test environment
+      tolerations:
+      - key: multi-node-inference
+        operator: Equal
+        value: 'true'
+        effect: NoSchedule
+      containers:
+      - name: server
+        # image: quay.io/opendatahub/vllm:fast
+        image: quay.io/opendatahub/vllm@sha256:7f19dde68eb47abeea155f0d68d4e708f4d93cc91fc632b7a5a0de181d8d193b
+        imagePullPolicy: Always
+        command: ["bash", "-c"]
+        args:
+        - |
+          # without specifying --node-ip-address it defaults to localhost
+          ray start --head --disable-usage-stats --include-dashboard false --node-ip-address ${POD_IP}
+          # wait for other node to join
+          until [[ $(ray status | grep -c node_) == 2 ]]; do
+            echo "Waiting..."
+            sleep 1
+          done
+          ray status
+          exec python3 -m vllm_tgis_adapter
+
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        ##################
+        - name: MODEL_NAME
+          value: /llama_3_storage/hf/8b_instruction_tuned
+        - name: TENSOR_PARALLEL_SIZE
+          value: "2"
+        - name: PIPELINE_PARALLEL_SIZE
+          value: "2"
+        - name: DISTRIBUTED_EXECUTOR_BACKEND
+          value: "ray"
+        - name: DISABLE_CUSTOM_ALL_REDUCE
+          value: "true"
+        - name: MAX_SEQUENCE_LENGTH
+          value: "8192"
+        - name: MAX_NEW_TOKENS
+          value: "2048"
+        - name: MAX_BATCH_SIZE
+          value: "256"
+        - name: MAX_CONCURRENT_REQUESTS
+          value: "320"
+        ###################
+        - name: PORT
+          value: "3000"
+        - name: MAX_LOG_LEN
+          value: "100"
+        - name: HF_HUB_CACHE
+          value: /shared_model_storage/transformers_cache
+        livenessProbe:
+          failureThreshold: 3
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 8
+          exec:
+            command:
+            - bash
+            - -c
+            - |
+              curl --silent --max-time 8 --fail-with-body http://localhost:3000/health
+        readinessProbe:
+          failureThreshold: 2
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 5
+          exec:
+            command:
+            - bash
+            - -c
+            - |
+              [[ $(ray status | grep -c node_) == 2 ]] &
+              p1=$!
+              curl --silent --max-time 5 --fail-with-body http://localhost:3000/health &
+              p2=$!
+              # wait for both background jobs to finish
+              wait $p1 $p2
+              # then check the exit status of each
+              wait $p1 && wait $p2
+        startupProbe:
+          failureThreshold: 40
+          periodSeconds: 30
+          successThreshold: 1
+          timeoutSeconds: 5
+          exec:
+            command:
+            - bash
+            - -c
+            - |
+              curl --silent --max-time 5 --fail-with-body http://localhost:3000/health
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        - containerPort: 8033
+          name: grpc
+          protocol: TCP
+        resources:
+          limits:
+            cpu: "16"
+            memory: 48Gi
+            nvidia.com/gpu: "1"
+          requests:
+            cpu: "8"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - name: shm
+          mountPath: /dev/shm
+        - mountPath: /llama_3_storage
+          name: llama-3-pvc
+          readOnly: true
+      priorityClassName: system-node-critical
+      securityContext: {}
+      # TODO: increase after done testing
+      terminationGracePeriodSeconds: 2
+      volumes:
+      - name: shm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 12Gi
+      - name: llama-3-pvc
+        persistentVolumeClaim:
+          claimName: llama-3-8b-pvc-1
+
+---
+# For each instance of a multi-pod inference server, create a StatefulSet for
+# the worker pod(s)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mpis-example-llama-3-8b-instruct-asdf-worker
+  namespace: vllm-llama3-8b  
+  labels:
+    app.kubernetes.io/name: multi-pod-inference-servers
+    app.kubernetes.io/instance: mpis-example
+    app.kubernetes.io/component: inference-server
+    mpis/instance: mpis-example-llama-3-8b-instruct-asdf
+    mpis/model-id: llama-3-8b-instruct
+    mpis/role: worker
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: multi-pod-inference-servers
+      app.kubernetes.io/instance: mpis-example
+      app.kubernetes.io/component: inference-server
+      mpis/instance: mpis-example-llama-3-8b-instruct-asdf
+      mpis/model-id: llama-3-8b-instruct
+      mpis/role: worker
+  # MUST match name of the Service
+  serviceName: mpis-example-pods
+  # update pods at the same time instead of being ordered
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: RollingUpdate
+    # maxUnavailable is only alpha in Kube v1.24 and requires a feature gate... so this has no effect
+    # REF: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#maximum-unavailable-pods
+    rollingUpdate:
+      maxUnavailable: 100%
+  replicas: 1
+  minReadySeconds: 5
+  progressDeadlineSeconds: 600
+  revisionHistoryLimit: 10
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: multi-pod-inference-servers
+        app.kubernetes.io/instance: mpis-example
+        app.kubernetes.io/component: inference-server
+        mpis/instance: mpis-example-llama-3-8b-instruct-asdf
+        mpis/model-id: llama-3-8b-instruct
+        mpis/role: worker
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "3000"
+        prometheus.io/scrape: "true"
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: nvidia.com/gpu.product
+                operator: In
+                values:
+                - NVIDIA-A10G
+      # REMOVME: specific to the BAM-cluster test environment
+      tolerations:
+      - key: multi-node-inference
+        operator: Equal
+        value: 'true'
+        effect: NoSchedule
+      containers:
+      - name: server
+        # image: quay.io/opendatahub/vllm:fast
+        image: quay.io/opendatahub/vllm@sha256:7f19dde68eb47abeea155f0d68d4e708f4d93cc91fc632b7a5a0de181d8d193b
+        imagePullPolicy: Always
+        command: ["bash", "-c"]
+        args:
+        - |
+          # pod address must include the "subdomain" (name of headless service)
+          #   https://stackoverflow.com/questions/59258223/how-to-resolve-pod-hostnames-from-other-pods
+          # Without specifying --node-ip-address it defaults to localhost
+          until ray start --address="${HOSTNAME%-worker-?}-leader-0.${SERVICENAME}:6379" --node-ip-address ${POD_IP}; do
+            echo "Waiting..."
+            sleep 1
+          done
+          ray status
+          exec sleep infinity
+
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        # can't get this from the downward API :(
+        # MUST match name of the serviceName and discovery Service
+        - name: SERVICENAME
+          value: mpis-example-pods
+
+        livenessProbe:
+          failureThreshold: 3
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+          exec:
+            command:
+            - bash
+            - -c
+            - |
+              [[ $(ray status | grep -c node_) == 2 ]]
+        startupProbe:
+          failureThreshold: 12
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 5
+          exec:
+            command:
+            - ray
+            - status
+        resources:
+          limits:
+            cpu: "16"
+            memory: 48Gi
+            nvidia.com/gpu: "1"
+          requests:
+            cpu: "8"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+        volumeMounts:
+        - name: shm
+          mountPath: /dev/shm
+        - name: llama-3-pvc
+          mountPath: /llama_3_storage
+          readOnly: true
+      priorityClassName: system-node-critical
+      securityContext: {}
+      # TODO: increase for production usage
+      terminationGracePeriodSeconds: 2
+      volumes:
+      - name: shm
+        emptyDir:
+          medium: Memory
+          sizeLimit: 12Gi
+      - name: llama-3-pvc
+        persistentVolumeClaim:
+          claimName: llama-3-8b-pvc-2
+

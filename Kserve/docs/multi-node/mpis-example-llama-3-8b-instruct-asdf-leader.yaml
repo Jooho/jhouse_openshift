@@ -1,0 +1,167 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  creationTimestamp: "2024-07-29T04:36:36Z"
+  generation: 4
+  labels:
+    app.kubernetes.io/component: inference-server
+    app.kubernetes.io/instance: mpis-example
+    app.kubernetes.io/name: multi-pod-inference-servers
+    mpis/instance: mpis-example-llama-3-8b-instruct-asdf
+    mpis/model-id: llama-3-8b-instruct
+    mpis/role: leader
+  name: mpis-example-llama-3-8b-instruct-asdf-leader
+  namespace: vllm-llama3-8b
+  resourceVersion: "23816130"
+  uid: 3bb6ebe1-4cf8-4e9a-9cb8-9b199ba288b0
+spec:
+  minReadySeconds: 5
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Retain
+    whenScaled: Retain
+  podManagementPolicy: Parallel
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: inference-server
+      app.kubernetes.io/instance: mpis-example
+      app.kubernetes.io/name: multi-pod-inference-servers
+      mpis/instance: mpis-example-llama-3-8b-instruct-asdf
+      mpis/model-id: llama-3-8b-instruct
+      mpis/role: leader
+  serviceName: mpis-example-pods
+  template:
+    metadata:
+      annotations:
+        prometheus.io/path: /metrics
+        prometheus.io/port: "3000"
+        prometheus.io/scrape: "true"
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/component: inference-server
+        app.kubernetes.io/instance: mpis-example
+        app.kubernetes.io/name: multi-pod-inference-servers
+        mpis/instance: mpis-example-llama-3-8b-instruct-asdf
+        mpis/model-id: llama-3-8b-instruct
+        mpis/role: leader
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: nvidia.com/gpu.product
+                operator: In
+                values:
+                - NVIDIA-A10G
+      containers:
+      - args:
+        - |
+          # without specifying --node-ip-address it defaults to localhost
+          ray start --head --disable-usage-stats --include-dashboard false --node-ip-address ${POD_IP}
+          # wait for other node to join
+          until [[ $(ray status | grep -c node_) == 2 ]]; do
+            echo "Waiting..."
+            sleep 1
+          done
+          ray status
+          exec python3 -m vllm_tgis_adapter
+        command:
+        - bash
+        - -c
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: status.podIP
+        - name: MODEL_NAME
+          value: /llama_3_storage/hf/8b_instruction_tuned
+        - name: TENSOR_PARALLEL_SIZE
+          value: "1"
+        - name: DISTRIBUTED_EXECUTOR_BACKEND
+          value: ray
+        - name: DISABLE_CUSTOM_ALL_REDUCE
+          value: "true"
+        - name: MAX_SEQUENCE_LENGTH
+          value: "8192"
+        - name: MAX_NEW_TOKENS
+          value: "2048"
+        - name: MAX_BATCH_SIZE
+          value: "256"
+        - name: MAX_CONCURRENT_REQUESTS
+          value: "320"
+        - name: PORT
+          value: "3000"
+        - name: MAX_LOG_LEN
+          value: "100"
+        - name: HF_HUB_CACHE
+          value: /shared_model_storage/transformers_cache
+        image: quay.io/opendatahub/vllm@sha256:7f19dde68eb47abeea155f0d68d4e708f4d93cc91fc632b7a5a0de181d8d193b
+        imagePullPolicy: Always
+        name: server
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        - containerPort: 8033
+          name: grpc
+          protocol: TCP
+        resources:
+          limits:
+            cpu: "16"
+            memory: 48Gi
+            nvidia.com/gpu: "1"
+          requests:
+            cpu: "8"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          runAsNonRoot: true
+          seccompProfile:
+            type: RuntimeDefault
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: FallbackToLogsOnError
+        volumeMounts:
+        - mountPath: /dev/shm
+          name: shm
+        - mountPath: /llama_3_storage
+          name: llama-3-pvc
+          readOnly: true
+      dnsPolicy: ClusterFirst
+      priorityClassName: system-node-critical
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 2
+      tolerations:
+      - effect: NoSchedule
+        key: multi-node-inference
+        operator: Equal
+        value: "true"
+      volumes:
+      - emptyDir:
+          medium: Memory
+          sizeLimit: 12Gi
+        name: shm
+      - name: llama-3-pvc
+        persistentVolumeClaim:
+          claimName: llama-3-8b-pvc-1
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate
+status:
+  availableReplicas: 1
+  collisionCount: 0
+  currentReplicas: 1
+  currentRevision: mpis-example-llama-3-8b-instruct-asdf-leader-68b45fb59
+  observedGeneration: 4
+  readyReplicas: 1
+  replicas: 1
+  updateRevision: mpis-example-llama-3-8b-instruct-asdf-leader-68b45fb59
+  updatedReplicas: 1
