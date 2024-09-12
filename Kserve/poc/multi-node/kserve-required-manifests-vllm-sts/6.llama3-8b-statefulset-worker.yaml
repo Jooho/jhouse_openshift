@@ -1,0 +1,156 @@
+---
+# For each instance of a multi-pod inference server, create a StatefulSet for
+# the worker pod(s)
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: vllm-mn-test-worker
+  namespace: vllm-llama3-8b-poc
+  annotations:
+    internal.serving.kserve.io/storage-initializer-sourceuri: pvc://llama-3-8b-pvc
+    prometheus.kserve.io/path: /metrics
+    prometheus.kserve.io/port: "3000"
+    serving.kserve.io/deploymentMode: RawDeployment
+  labels:
+    app: isvc.vllm-mn-test-predictor
+    component: predictor
+    serving.kserve.io/inferenceservice: vllm-mn-test
+    node-type: worker
+spec:
+  selector:
+    matchLabels:
+      app: isvc.vllm-mn-test-predictor
+      node-type: worker
+  # MUST match name of the Service
+  serviceName: vllm-mn-test-worker
+  # update pods at the same time instead of being ordered
+  podManagementPolicy: Parallel
+  updateStrategy:
+    type: RollingUpdate
+    # maxUnavailable is only alpha in Kube v1.24 and requires a feature gate... so this has no effect
+    # REF: https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#maximum-unavailable-pods
+    rollingUpdate:
+      maxUnavailable: 100%
+  replicas: 1
+  minReadySeconds: 5
+  progressDeadlineSeconds: 600
+  revisionHistoryLimit: 10
+  template:
+    metadata:
+      labels:
+        app: isvc.vllm-mn-test-predictor
+        component: predictor
+        serving.kserve.io/inferenceservice: vllm-mn-test
+        node-type: worker
+      annotations:
+        internal.serving.kserve.io/storage-initializer-sourceuri: pvc://llama-3-8b-pvc
+        prometheus.kserve.io/path: /metrics
+        prometheus.kserve.io/port: "3000"
+        serving.kserve.io/deploymentMode: RawDeployment
+        # prometheus.io/path: /metrics
+        # prometheus.io/port: "3000"
+        # prometheus.io/scrape: "true"
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.product
+                    operator: In
+                    values:
+                      - NVIDIA-A10G
+      initContainers:
+        - name: check-gcs-health
+          image: vllm/vllm-openai:latest
+          command:
+            [
+              "bash",
+              "-c",
+              'SECONDS=0; while true; do if (( SECONDS <= 120 )); then if ray health-check --address ${ISVC_NAME}-head.${POD_NAMESPACE}.svc.cluster.local:6379 > /dev/null 2>&1; then echo "GCS is ready."; break; fi; echo "$SECONDS seconds elapsed: Waiting for GCS to be ready."; else if ray health-check --address ${ISVC_NAME}-head.${POD_NAMESPACE}.svc.cluster.local:6379; then echo "GCS is ready. Any error messages above can be safely ignored."; break; fi; echo "$SECONDS seconds elapsed: Still waiting for GCS to be ready. For troubleshooting, refer to the FAQ at https://github.com/ray-project/kuberay/blob/master/docs/guidance/FAQ.md."; fi; sleep 5; done',
+            ]
+          env:
+            - name: ISVC_NAME
+              value: vllm-mn-test
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+      containers:
+        - name: server
+          # image: quay.io/opendatahub/vllm:fast
+          # image: quay.io/opendatahub/vllm@sha256:7f19dde68eb47abeea155f0d68d4e708f4d93cc91fc632b7a5a0de181d8d193b
+          image: vllm/vllm-openai:latest
+          imagePullPolicy: Always
+          command: ["bash", "-c"]
+          args:
+            - |
+              echo "Attempting to connect to Ray cluster at $RAY_HEAD_ADDRESS ..."
+              RAY_HEAD_ADDRESS="${ISVC_NAME}-head.${POD_NAMESPACE}.svc.cluster.local:6379"
+              ray start --address="$RAY_HEAD_ADDRESS" --block
+          env:
+            # Some bugs around
+            - name: HOME
+              value: "/tmp"
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: ISVC_NAME
+              value: vllm-mn-test
+            # can't get this from the downward API :(
+            # MUST match name of the serviceName and discovery Service
+          livenessProbe:
+            failureThreshold: 3
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 5
+            exec:
+              command:
+                - bash
+                - -c
+                - |
+                  [[ $(ray status | grep -c node_) -eq ${PIPELINE_PARALLEL_SIZE} ]]
+          startupProbe:
+            failureThreshold: 12
+            periodSeconds: 5
+            successThreshold: 1
+            timeoutSeconds: 5
+            exec:
+              command:
+                - ray
+                - status
+          resources:
+            limits:
+              cpu: "16"
+              memory: 48Gi
+              nvidia.com/gpu: "1"
+            requests:
+              cpu: "8"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: shm
+              mountPath: /dev/shm
+            - name: llama-3-pvc
+              mountPath: /llama_3_storage
+              readOnly: true
+      priorityClassName: system-node-critical
+      securityContext: {}
+      # TODO: increase for production usage
+      terminationGracePeriodSeconds: 2
+      volumes:
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 12Gi
+        - name: llama-3-pvc
+          persistentVolumeClaim:
+            claimName: llama-3-8b-pvc-2

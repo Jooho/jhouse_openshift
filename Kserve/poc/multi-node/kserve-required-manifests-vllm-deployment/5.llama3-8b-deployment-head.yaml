@@ -1,0 +1,187 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vllm-mn-test-head
+  namespace: vllm-llama3-8b-poc
+  annotations:
+    internal.serving.kserve.io/storage-initializer-sourceuri: pvc://llama-3-8b-instruct-pv-claim
+    prometheus.kserve.io/path: /metrics
+    prometheus.kserve.io/port: "3000"
+    serving.kserve.io/deploymentMode: RawDeployment
+  labels:
+    app: isvc.vllm-mn-test-predictor
+    component: predictor
+    serving.kserve.io/inferenceservice: vllm-mn-test
+    node-type: head
+spec:
+  selector:
+    matchLabels:
+      app: isvc.vllm-mn-test-predictor
+      node-type: head
+  replicas: 1
+  minReadySeconds: 5
+  progressDeadlineSeconds: 600
+  revisionHistoryLimit: 10
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 100%
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: isvc.vllm-mn-test-predictor
+        component: predictor
+        serving.kserve.io/inferenceservice: vllm-mn-test
+        node-type: head # It is a new label
+      annotations:
+        internal.serving.kserve.io/storage-initializer-sourceuri: pvc://llama-3-8b-pvc
+        prometheus.kserve.io/path: /metrics
+        prometheus.kserve.io/port: "3000"
+        serving.kserve.io/deploymentMode: RawDeployment
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: nvidia.com/gpu.product
+                    operator: In
+                    values:
+                      - NVIDIA-A10G
+      containers:
+        - name: server
+          image: vllm/vllm-openai:latest
+          imagePullPolicy: Always
+          command: ["bash", "-c"]
+          args:
+            - |
+              ray start --head --disable-usage-stats --include-dashboard false 
+              # wait for other node to join
+              until [[ $(ray status | grep -c node_) -eq ${PIPELINE_PARALLEL_SIZE} ]]; do
+                echo "Waiting..."
+                sleep 1
+              done
+              ray status
+
+              python3 -m vllm.entrypoints.openai.api_server --model ${MODEL_NAME}  --tensor-parallel-size $TENSOR_PARALLEL_SIZE --pipeline-parallel-size $PIPELINE_PARALLEL_SIZE --max-log-len 100  --disable-custom-all-reduce --distributed-executor-backend ray  --disable-frontend-multiprocessing --port ${PORT}  --uvicorn-log-level debug
+          env:
+            - name: RAY_PORT
+              value: "6379"
+            - name: HOME
+              value: "/tmp"
+            - name: RAY_ADDRESS
+              value: 127.0.0.1:6379
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: ISVC_NAME
+              value: vllm-mn-test
+            - name: MODEL_NAME
+              value: /llama_3_storage/hf/8b_instruction_tuned
+            - name: TENSOR_PARALLEL_SIZE
+              value: "1"
+            - name: PIPELINE_PARALLEL_SIZE
+              value: "2"
+            - name: DISTRIBUTED_EXECUTOR_BACKEND
+              value: "ray"
+            - name: DISABLE_CUSTOM_ALL_REDUCE
+              value: "true"
+            - name: MAX_SEQUENCE_LENGTH
+              value: "8192"
+            - name: MAX_NEW_TOKENS
+              value: "2048"
+            - name: MAX_BATCH_SIZE
+              value: "256"
+            - name: MAX_CONCURRENT_REQUESTS
+              value: "320"
+            - name: PORT
+              value: "3000"
+            - name: MAX_LOG_LEN
+              value: "100"
+            - name: HF_HUB_CACHE
+              value: /tmp
+          livenessProbe:
+            failureThreshold: 3
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 5
+            exec:
+              command:
+                - bash
+                - -c
+                - |
+                  # curl --silent --max-time 5 --fail-with-body http://localhost:3000/health &   #vllm 0.6.0 does not have curl 7.75 that has --fail-with-body
+                  curl --silent --max-time 5 http://localhost:3000/health
+          readinessProbe:
+            failureThreshold: 2
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+            exec:
+              command:
+                - bash
+                - -c
+                - |
+                  [[ $(ray status | grep -c node_) -eq ${PIPELINE_PARALLEL_SIZE} ]] &
+                  p1=$!
+                  # curl --silent --max-time 5 --fail-with-body http://localhost:3000/health &   #vllm 0.6.0 does not have curl 7.75 that has --fail-with-body
+                  curl --silent --max-time 5 http://localhost:3000/health &
+                  p2=$!
+                  wait $p1 $p2
+                  wait $p1 && wait $p2
+          startupProbe:
+            failureThreshold: 40
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 5
+            exec:
+              command:
+                - bash
+                - -c
+                - |
+                  # curl --silent --max-time 5 --fail-with-body http://localhost:3000/health &   #vllm 0.6.0 does not have curl 7.75 that has --fail-with-body
+                  curl --silent --max-time 5 http://localhost:3000/health
+          ports:
+            - containerPort: 3000
+              name: http
+              protocol: TCP
+            - containerPort: 8033
+              name: grpc
+              protocol: TCP
+          resources:
+            limits:
+              cpu: "16"
+              memory: 48Gi
+              nvidia.com/gpu: "1"
+            requests:
+              cpu: "8"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            runAsNonRoot: true
+            seccompProfile:
+              type: RuntimeDefault
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - name: shm
+              mountPath: /dev/shm
+            - mountPath: /llama_3_storage
+              name: llama-3-pvc
+              readOnly: true
+      priorityClassName: system-node-critical
+      securityContext: {}
+      terminationGracePeriodSeconds: 2
+      volumes:
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 12Gi
+        - name: llama-3-pvc
+          persistentVolumeClaim:
+            claimName: llama-3-8b-pvc-1

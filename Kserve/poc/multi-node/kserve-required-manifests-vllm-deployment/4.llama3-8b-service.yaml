@@ -1,0 +1,50 @@
+---
+# Service enabling Pod/IP discovery only, do not use for routing inference requests
+apiVersion: v1
+kind: Service
+metadata:
+  # MUST match serviceName of the StatefulSet(s)
+  name: vllm-mn-test-head
+  namespace: vllm-llama3-8b-poc
+  annotations:
+    internal.serving.kserve.io/storage-initializer-sourceuri: pvc://llama-3-8b-pvc
+    prometheus.kserve.io/path: /metrics
+    prometheus.kserve.io/port: "3000"
+    serving.kserve.io/deploymentMode: RawDeployment
+  labels:
+    app: isvc.vllm-mn-test-predictor
+    component: predictor
+    serving.kserve.io/inferenceservice: vllm-mn-test
+spec:
+  clusterIP: None
+  publishNotReadyAddresses: True
+  selector:
+    app: isvc.vllm-mn-test-predictor
+    node-type: head
+---
+# Service per-model for inference request routing across instances of the model
+apiVersion: v1
+kind: Service
+metadata:
+  name: vllm-mn-test-predictor
+  namespace: vllm-llama3-8b-poc
+  annotations:
+    internal.serving.kserve.io/storage-initializer-sourceuri: pvc://llama-3-8b-pvc
+    prometheus.kserve.io/path: /metrics
+    prometheus.kserve.io/port: "3000"
+    serving.kserve.io/deploymentMode: RawDeployment
+  labels:
+    app: isvc.vllm-mn-test-predictor
+    component: predictor
+    serving.kserve.io/inferenceservice: vllm-mn-test
+spec:
+  ports:
+    - name: grpc
+      port: 8033
+    - name: http
+      port: 3000
+    - name: redis
+      port: 6379     
+  selector:
+    app: isvc.vllm-mn-test-predictor
+    node-type: head
