@@ -1,0 +1,15 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: huggingface-llama3
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: huggingface
+      storageUri: pvc://llama-3-8b-pvc/hf/8b_instruction_tuned
+      env:
+        - name: TENSOR_PARALLEL_SIZE
+          value: "1"
+        - name: PIPELINE_PARALLEL_SIZE
+          value: "2"
