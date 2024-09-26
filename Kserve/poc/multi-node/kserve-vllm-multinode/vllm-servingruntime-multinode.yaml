@@ -1,16 +1,16 @@
 apiVersion: serving.kserve.io/v1alpha1
 kind: ServingRuntime
 metadata:
-  name: kserve-huggingfaceserver-multinode
+  name: kserve-vllm
 spec:
   annotations:
     prometheus.kserve.io/port: "3000"
     prometheus.kserve.io/path: "/metrics"
   supportedModelFormats:
-    - name: huggingface
+    - name: vllm
       version: "1"
       autoSelect: true
-      priority: 2
+      priority: 1
   protocolVersions:
     - v2
     - v1
@@ -25,7 +25,8 @@ spec:
                   - NVIDIA-A10G    
   containers:
     - name: kserve-container
-      image: kserve/huggingfaceserver:latest
+      # image: vllm/vllm-openai:latest
+      image: vllm/vllm-openai:latest
       command: ["bash", "-c"]
       args:
         - |
@@ -37,14 +38,7 @@ spec:
           done
           ray status
 
-          export MODEL=${MODEL_ID}
-          if [[ ! -z ${MODEL_DIR} ]]
-          then
-            MODEL=${MODEL_DIR}
-          fi
-
-          python3 -m huggingfaceserver --model_name=${MODEL_NAME}  --model_dir=${MODEL} --tensor-parallel-size=${TENSOR_PARALLEL_SIZE} --pipeline-parallel-size=${PIPELINE_PARALLEL_SIZE}
-        
+          python3 -m vllm.entrypoints.openai.api_server --model ${MODEL_DIR} --served-model-name ${MODEL_NAME} --tensor-parallel-size ${TENSOR_PARALLEL_SIZE} --pipeline-parallel-size ${PIPELINE_PARALLEL_SIZE} --max-log-len ${MAX_LOG_LEN} --distributed-executor-backend ${DISTRIBUTED_EXECUTOR_BACKEND} --port ${PORT} 
       env:
         - name: RAY_PORT
           value: "6379"
@@ -59,7 +53,23 @@ spec:
         - name: TENSOR_PARALLEL_SIZE
           value: "1"
         - name: PIPELINE_PARALLEL_SIZE
-          value: "2"       
+          value: "2"
+        - name: DISTRIBUTED_EXECUTOR_BACKEND
+          value: "ray"
+        - name: DISABLE_CUSTOM_ALL_REDUCE
+          value: "true"
+        - name: MAX_SEQUENCE_LENGTH
+          value: "8192"
+        - name: MAX_NEW_TOKENS
+          value: "2048"
+        - name: MAX_BATCH_SIZE
+          value: "256"
+        - name: MAX_CONCURRENT_REQUESTS
+          value: "320"
+        - name: PORT
+          value: "3000"
+        - name: MAX_LOG_LEN
+          value: "100"
         - name: HF_HUB_CACHE
           value: /tmp
       resources:
@@ -82,7 +92,8 @@ spec:
             - bash
             - -c
             - |
-              curl --silent --max-time 5 http://localhost:8080
+              # curl --silent --max-time 5 --fail-with-body http://localhost:3000/health &   #vllm 0.6.0 does not have curl 7.75 that has --fail-with-body
+              curl --silent --max-time 5 http://localhost:3000/health
       readinessProbe:
         failureThreshold: 2
         periodSeconds: 10
@@ -95,7 +106,8 @@ spec:
             - |
               [[ $(ray status | grep -c node_) -eq ${PIPELINE_PARALLEL_SIZE} ]] &
               p1=$!
-              curl --silent --max-time 5 http://localhost:8080 &
+              # curl --silent --max-time 5 --fail-with-body http://localhost:3000/health &   #vllm 0.6.0 does not have curl 7.75 that has --fail-with-body
+              curl --silent --max-time 5 http://localhost:3000/health &
               p2=$!
               wait $p1 $p2
               wait $p1 && wait $p2
@@ -109,7 +121,8 @@ spec:
             - bash
             - -c
             - |
-              curl --silent --max-time 5 http://localhost:8080
+              # curl --silent --max-time 5 --fail-with-body http://localhost:3000/health &   #vllm 0.6.0 does not have curl 7.75 that has --fail-with-body
+              curl --silent --max-time 5 http://localhost:3000/health                  
   volumes:
     - name: shm
       emptyDir:
@@ -127,7 +140,7 @@ spec:
                     - NVIDIA-A10G
     containers:
       - name: worker-container
-        image: kserve/huggingfaceserver:latest
+        image: vllm/vllm-openai:latest
         command: ["bash", "-c"]
         args:
           - |

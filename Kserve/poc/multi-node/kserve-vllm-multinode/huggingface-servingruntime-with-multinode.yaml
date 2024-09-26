@@ -59,7 +59,21 @@ spec:
         - name: TENSOR_PARALLEL_SIZE
           value: "1"
         - name: PIPELINE_PARALLEL_SIZE
-          value: "2"       
+          value: "2"
+        - name: DISTRIBUTED_EXECUTOR_BACKEND
+          value: "ray"
+        - name: DISABLE_CUSTOM_ALL_REDUCE
+          value: "true"
+        - name: MAX_SEQUENCE_LENGTH
+          value: "8192"
+        - name: MAX_NEW_TOKENS
+          value: "2048"
+        - name: MAX_BATCH_SIZE
+          value: "256"
+        - name: MAX_CONCURRENT_REQUESTS
+          value: "320"
+        - name: MAX_LOG_LEN
+          value: "100"
         - name: HF_HUB_CACHE
           value: /tmp
       resources:
