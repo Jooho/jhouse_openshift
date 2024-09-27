@@ -11,5 +11,7 @@ spec:
       env:
         - name: TENSOR_PARALLEL_SIZE
           value: "1"
-        - name: PIPELINE_PARALLEL_SIZE
-          value: "2"
+        # - name: PIPELINE_PARALLEL_SIZE
+        #   value: "2"
+    workerSpec:
+      size: 1     

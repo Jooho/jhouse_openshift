@@ -52,8 +52,6 @@ spec:
               fieldPath: metadata.namespace
         - name: TENSOR_PARALLEL_SIZE
           value: "1"
-        - name: PIPELINE_PARALLEL_SIZE
-          value: "2"
         - name: PORT
           value: "3000"
         - name: HF_HUB_CACHE
@@ -115,6 +113,7 @@ spec:
         medium: Memory
         sizeLimit: 12Gi
   workerSpec:
+    size: 1
     affinity:
       nodeAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:

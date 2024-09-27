@@ -58,8 +58,6 @@ spec:
               fieldPath: metadata.namespace
         - name: TENSOR_PARALLEL_SIZE
           value: "1"
-        - name: PIPELINE_PARALLEL_SIZE
-          value: "2"       
         - name: HF_HUB_CACHE
           value: /tmp
       resources:
@@ -82,7 +80,19 @@ spec:
             - bash
             - -c
             - |
-              curl --silent --max-time 5 http://localhost:8080
+              # curl --silent --max-time 5 http://localhost:8080
+              # Check GPU usage (when worker node restarted, it becomes NOT ready)
+              gpu_status=$(ray status | grep GPU)
+              used_gpu=$(echo "$gpu_status" | awk '{print $1}' | cut -d'/' -f1)
+              reserved_gpu=$(echo "$gpu_status" | awk '{print $1}' | cut -d'/' -f2)
+
+              # Determine health status based on GPU usage
+              if [[ "$used_gpu" != "$reserved_gpu" ]]; then
+                  echo "Liveness Probe: Unhealthy - Used: $used_gpu, Reserved: $reserved_gpu"
+                  exit 1
+              else
+                  exit 0                  
+              fi 
       readinessProbe:
         failureThreshold: 2
         periodSeconds: 10
@@ -95,10 +105,28 @@ spec:
             - |
               [[ $(ray status | grep -c node_) -eq ${PIPELINE_PARALLEL_SIZE} ]] &
               p1=$!
-              curl --silent --max-time 5 http://localhost:8080 &
+
+              # curl --silent --max-time 5 http://localhost:8080 &
+              python3 -c "import requests; requests.get('http://localhost:8080', timeout=5)" &
               p2=$!
-              wait $p1 $p2
-              wait $p1 && wait $p2
+
+              # Check GPU usage (when worker node restarted, it becomes NOT ready)
+              gpu_status=$(ray status | grep GPU)
+              used_gpu=$(echo "$gpu_status" | awk '{print $1}' | cut -d'/' -f1)
+              reserved_gpu=$(echo "$gpu_status" | awk '{print $1}' | cut -d'/' -f2)
+
+              # Determine health status based on GPU usage
+              if [[ "$used_gpu" != "$reserved_gpu" ]]; then
+                  echo "Readiness Probe: Unhealthy - Used: $used_gpu, Reserved: $reserved_gpu"
+                  exit 1
+              else
+                  exit 0                  
+              fi & # Run this check in the background
+              p3=$!
+
+              # Wait for all processes to complete
+              wait $p1 $p2 $p3
+              wait $p1 && wait $p2 && wait $p3
       startupProbe:
         failureThreshold: 40
         periodSeconds: 30
@@ -109,13 +137,14 @@ spec:
             - bash
             - -c
             - |
-              curl --silent --max-time 5 http://localhost:8080
+              ray status
   volumes:
     - name: shm
       emptyDir:
         medium: Memory
         sizeLimit: 12Gi
   workerSpec:
+    size: 2
     affinity:
       nodeAffinity:
         requiredDuringSchedulingIgnoredDuringExecution:
