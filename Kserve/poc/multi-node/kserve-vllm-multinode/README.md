@@ -16,7 +16,7 @@ git clone --branch multi_node_impl https://github.com/Jooho/kserve
 cd kserve
 
 sed 's/Serverless"$/RawDeployment"/g' -i ./config/configmap/inferenceservice.yaml
-sed "s/kserve\/kserve-controller:latest$/quay.io\/jooholee\/kserve-controller:multinode/g" -i ./config/default/manager_image_patch.yaml
+sed "s/kserve\/kserve-controller:latest$/quay.io\/jooholee\/kserve-controller:multi-node/g" -i ./config/default/manager_image_patch.yaml
 
 #fixed with another pr
 FILENAME=./hack/self-signed-ca.sh
