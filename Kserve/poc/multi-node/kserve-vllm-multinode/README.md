@@ -12,7 +12,7 @@ mkdir -p $ROOT_DIR
 
 cd ${ROOT_DIR}
 export KSERVE_DIR=${ROOT_DIR}/kserve
-git clone --branch multi_node_impl https://github.com/Jooho/kserve
+git clone --branch multi-node-dev https://github.com/Jooho/kserve
 cd kserve
 
 sed 's/Serverless"$/RawDeployment"/g' -i ./config/configmap/inferenceservice.yaml
