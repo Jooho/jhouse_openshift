@@ -1,0 +1,15 @@
+apiVersion: serving.kserve.io/v1beta1
+kind: InferenceService
+metadata:
+  name: vllm-llama3-8b
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: vLLM
+      runtime: vllm-multinode-runtime
+      storageUri: pvc://llama-3-8b-pvc/hf/8b_instruction_tuned
+      ports:
+        - containerPort: 8033
+          name: h2c
+          protocol: TCP
