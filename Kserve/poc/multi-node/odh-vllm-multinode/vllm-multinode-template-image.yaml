@@ -99,7 +99,7 @@ objects:
                 - bash
                 - -c
                 - |
-                  curl --silent --max-time 8 --fail-with-body http://localhost:3000/health
+                  curl --silent --max-time 8 --fail-with-body http://localhost:8080/health
                   # Check GPU usage (when worker node restarted, it becomes NOT ready)
                   gpu_status=$(ray status | grep GPU)
                   used_gpu=$(echo "$gpu_status" | awk '{print $1}' | cut -d'/' -f1)
@@ -125,7 +125,7 @@ objects:
                   [[ $(ray status | grep -c node_) -eq ${PIPELINE_PARALLEL_SIZE} ]] &
                   p1=$!
 
-                  curl --silent --max-time 5 --fail-with-body http://localhost:3000/health &
+                  curl --silent --max-time 5 --fail-with-body http://localhost:8080/health &
                   p2=$!
                   
                   # Check GPU usage (when worker node restarted, it becomes NOT ready)
