@@ -17,7 +17,7 @@ Open question:
 ## Deployment
 **POC Steps**
 ~~~
-export HF_TOKEN=XXX
+export HF_TEST_TOKEN=XXX
 
 cd kserve-required-manifests-vllm-deployment
 
@@ -46,7 +46,7 @@ curl http://localhost:3000/v1/completions \
 
 ## StatefulSet
 ~~~
-export HF_TOKEN=XXX
+export HF_TEST_TOKEN=XXX
 
 cd kserve-required-manifests-vllm-sts
 
@@ -108,7 +108,7 @@ curl http://localhost:3000/v1/completions \
 
 ## KServe ISVC on openshift
 ~~~
-export HF_TOKEN=XXX
+export HF_TEST_TOKEN=XXX
 
 cd kserve-vllm-multinode
 

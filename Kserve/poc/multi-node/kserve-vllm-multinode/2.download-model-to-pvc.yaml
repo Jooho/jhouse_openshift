@@ -43,7 +43,7 @@ spec:
       args:
         [
           "-c",
-          "pip install --upgrade pip && pip install --upgrade huggingface_hub && python3 -c 'from huggingface_hub import snapshot_download\nsnapshot_download(\n repo_id=\"meta-llama/Meta-Llama-3-8B-Instruct\",\nlocal_dir=\"/mnt/models/hf/8b_instruction_tuned\",local_dir_use_symlinks=False,use_auth_token=\"${HF_TOKEN}\")'",
+          "pip install --upgrade pip && pip install --upgrade huggingface_hub && python3 -c 'from huggingface_hub import snapshot_download\nsnapshot_download(\n repo_id=\"meta-llama/Meta-Llama-3-8B-Instruct\",\nlocal_dir=\"/mnt/models/hf/8b_instruction_tuned\",local_dir_use_symlinks=False,use_auth_token=\"${HF_TEST_TOKEN}\")'",
         ]
       volumeMounts:
         - mountPath: "/mnt/models/"
