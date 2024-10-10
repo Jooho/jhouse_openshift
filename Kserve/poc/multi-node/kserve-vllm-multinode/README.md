@@ -6,6 +6,7 @@ export ROOT_DIR=/tmp/kserve_local
 export USER_NAME=jooholee
 export KSERVE_ENABLE_SELF_SIGNED_CA=true
 export STORAGE_CLASS=gp3-csi
+export MODEL=meta-llama/Meta-Llama-3-8B-Instruct
 export HF_TEST_TOKEN=XXX
 
 mkdir -p $ROOT_DIR
