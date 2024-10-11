@@ -99,7 +99,14 @@ objects:
                 - bash
                 - -c
                 - |
-                  curl --silent --max-time 8 --fail-with-body http://localhost:3000/health
+                  # Check if the registered ray nodes count is the same as PIPELINE_PARALLEL_SIZE
+                  if [[ $(ray status | grep -c node_) -eq ${PIPELINE_PARALLEL_SIZE} ]]; then
+                    exit 0
+                  else
+                    exit 1
+                  fi &
+                  p1=$!
+
                   # Check GPU usage (when worker node restarted, it becomes NOT ready)
                   gpu_status=$(ray status | grep GPU)
                   used_gpu=$(echo "$gpu_status" | awk '{print $1}' | cut -d'/' -f1)
@@ -111,7 +118,23 @@ objects:
                       exit 1
                   else
                       exit 0                  
-                  fi 
+                  fi & # Run this check in the background
+                  p2=$!
+                  
+                  # Wait for all processes to complete
+                  wait $p1
+                  status1=$?
+                  wait $p2
+                  status2=$?
+                  
+                  # Check all return codes
+                  if [[ $status1 -ne 0 || $status2 -ne 0 ]]; then
+                      echo "One or more processes failed."
+                      exit 1
+                  else
+                      echo "All processes succeeded."
+                      exit 0
+                  fi
           readinessProbe:
             failureThreshold: 2
             periodSeconds: 10
@@ -122,7 +145,12 @@ objects:
                 - bash
                 - -c
                 - |
-                  [[ $(ray status | grep -c node_) -eq ${PIPELINE_PARALLEL_SIZE} ]] &
+                  # Check if the registered ray nodes count is the same as PIPELINE_PARALLEL_SIZE
+                  if [[ $(ray status | grep -c node_) -eq ${PIPELINE_PARALLEL_SIZE} ]]; then
+                    exit 0
+                  else
+                    exit 1
+                  fi &
                   p1=$!
 
                   curl --silent --max-time 5 --fail-with-body http://localhost:3000/health &
@@ -143,8 +171,21 @@ objects:
                   p3=$!
 
                   # Wait for all processes to complete
-                  wait $p1 $p2 $p3
-                  wait $p1 && wait $p2 && wait $p3
+                  wait $p1
+                  status1=$?
+                  wait $p2
+                  status2=$?
+                  wait $p3
+                  status3=$?
+
+                  # Check all return codes
+                  if [[ $status1 -ne 0 || $status2 -ne 0 || $status3 -ne 0 ]]; then
+                      echo "One or more processes failed."
+                      exit 1
+                  else
+                      echo "All processes succeeded."
+                      exit 0
+                  fi
           startupProbe:
             failureThreshold: 40
             periodSeconds: 30
@@ -217,7 +258,12 @@ objects:
                   - bash
                   - -c
                   - |
-                    [[ $(ray status | grep -c node_) -eq ${PIPELINE_PARALLEL_SIZE} ]]
+                    # Check if the registered ray nodes count is the same as PIPELINE_PARALLEL_SIZE
+                    if [[ $(ray status | grep -c node_) -eq ${PIPELINE_PARALLEL_SIZE} ]]; then
+                      exit 0
+                    else
+                      exit 1
+                    fi
             startupProbe:
               failureThreshold: 12
               periodSeconds: 5
