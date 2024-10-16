@@ -202,7 +202,7 @@ objects:
               name: http
               protocol: TCP
       workerSpec:
-        pipelineParalleSize: 1
+        pipelineParallelSize: 1
         containers:
           - name: worker-container
             image: $(vllm-image)
