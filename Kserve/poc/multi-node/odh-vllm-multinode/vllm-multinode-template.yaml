@@ -153,7 +153,7 @@ objects:
                   fi &
                   p1=$!
 
-                  curl --silent --max-time 5 --fail-with-body http://localhost:3000/health &
+                  curl --silent --max-time 5 --fail-with-body http://localhost:8080/health &
                   p2=$!
                   
                   # Check GPU usage (when worker node restarted, it becomes NOT ready)
