@@ -202,7 +202,7 @@ objects:
               name: http
               protocol: TCP
       workerSpec:
-        size: 1
+        pipelineParalleSize: 1
         containers:
           - name: worker-container
             image: quay.io/opendatahub/vllm@sha256:7f19dde68eb47abeea155f0d68d4e708f4d93cc91fc632b7a5a0de181d8d193b
