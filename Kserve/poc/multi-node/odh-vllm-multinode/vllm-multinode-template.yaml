@@ -87,10 +87,10 @@ objects:
             limits:
               cpu: "16"
               memory: 48Gi
-              nvidia.com/gpu: 1
+              nvidia.com/gpu: "1"
             requests:
               cpu: "8"
-              nvidia.com/gpu: 1
+              nvidia.com/gpu: "1"
           livenessProbe:
             failureThreshold: 3
             periodSeconds: 30
@@ -212,10 +212,10 @@ objects:
               limits:
                 cpu: "16"
                 memory: 48Gi
-                nvidia.com/gpu: 1
+                nvidia.com/gpu: "1"
               requests:
                 cpu: "8"
-                nvidia.com/gpu: 1
+                nvidia.com/gpu: "1"
             livenessProbe:
               failureThreshold: 3
               periodSeconds: 5
