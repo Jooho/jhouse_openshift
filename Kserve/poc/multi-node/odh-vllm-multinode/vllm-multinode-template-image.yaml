@@ -87,8 +87,10 @@ objects:
             limits:
               cpu: "16"
               memory: 48Gi
+              nvidia.com/gpu: 1
             requests:
               cpu: "8"
+              nvidia.com/gpu: 1
           livenessProbe:
             failureThreshold: 3
             periodSeconds: 30
@@ -99,41 +101,20 @@ objects:
                 - bash
                 - -c
                 - |
-                  # Check if the registered ray nodes count is the same as PIPELINE_PARALLEL_SIZE
-                  if [[ $(ray status | grep -c node_) -eq ${PIPELINE_PARALLEL_SIZE} ]]; then
-                    exit 0
-                  else
-                    exit 1
-                  fi &
-                  p1=$!
-
-                  # Check GPU usage (when worker node restarted, it becomes NOT ready)
+                   # Check if the registered ray nodes count is the same as PIPELINE_PARALLEL_SIZE
                   gpu_status=$(ray status | grep GPU)
+                  if [[ -z $gpu_status ]]; then
+                    echo "$1: GPU does not exist"
+                    exit 1
+                  fi
+
                   used_gpu=$(echo "$gpu_status" | awk '{print $1}' | cut -d'/' -f1)
                   reserved_gpu=$(echo "$gpu_status" | awk '{print $1}' | cut -d'/' -f2)
 
                   # Determine health status based on GPU usage
                   if [[ "$used_gpu" != "$reserved_gpu" ]]; then
-                      echo "Liveness Probe: Unhealthy - Used: $used_gpu, Reserved: $reserved_gpu"
-                      exit 1
-                  else
-                      exit 0                  
-                  fi & # Run this check in the background
-                  p2=$!
-                  
-                  # Wait for all processes to complete
-                  wait $p1
-                  status1=$?
-                  wait $p2
-                  status2=$?
-                  
-                  # Check all return codes
-                  if [[ $status1 -ne 0 || $status2 -ne 0 ]]; then
-                      echo "One or more processes failed."
-                      exit 1
-                  else
-                      echo "All processes succeeded."
-                      exit 0
+                    echo "$1: Unhealthy - Used: $used_gpu, Reserved: $reserved_gpu"
+                    exit 1
                   fi
           readinessProbe:
             failureThreshold: 2
@@ -145,47 +126,31 @@ objects:
                 - bash
                 - -c
                 - |
-                  # Check if the registered ray nodes count is the same as PIPELINE_PARALLEL_SIZE
-                  if [[ $(ray status | grep -c node_) -eq ${PIPELINE_PARALLEL_SIZE} ]]; then
-                    exit 0
-                  else
+                  # Check if the registered nodes count matches PIPELINE_PARALLEL_SIZE
+                  registered_node_count=$(ray status | grep -c node_)
+                  if [[ $registered_node_count -ne "$PIPELINE_PARALLEL_SIZE" ]]; then
+                    echo "Readiness Probe: Unhealthy - Registered nodes count ($registered_node_count) does not match PIPELINE_PARALLEL_SIZE ($PIPELINE_PARALLEL_SIZE)."
                     exit 1
-                  fi &
-                  p1=$!
+                  fi
 
-                  curl --silent --max-time 5 --fail-with-body http://localhost:3000/health &
-                  p2=$!
-                  
-                  # Check GPU usage (when worker node restarted, it becomes NOT ready)
+                  # Check if the registered ray nodes count is the same as PIPELINE_PARALLEL_SIZE
                   gpu_status=$(ray status | grep GPU)
+                  if [[ -z $gpu_status ]]; then
+                    echo "$1: GPU does not exist"
+                    exit 1
+                  fi
+
                   used_gpu=$(echo "$gpu_status" | awk '{print $1}' | cut -d'/' -f1)
                   reserved_gpu=$(echo "$gpu_status" | awk '{print $1}' | cut -d'/' -f2)
 
                   # Determine health status based on GPU usage
                   if [[ "$used_gpu" != "$reserved_gpu" ]]; then
-                      echo "Readiness Probe: Unhealthy - Used: $used_gpu, Reserved: $reserved_gpu"
-                      exit 1
-                  else
-                      exit 0                  
-                  fi & # Run this check in the background
-                  p3=$!
-
-                  # Wait for all processes to complete
-                  wait $p1
-                  status1=$?
-                  wait $p2
-                  status2=$?
-                  wait $p3
-                  status3=$?
-
-                  # Check all return codes
-                  if [[ $status1 -ne 0 || $status2 -ne 0 || $status3 -ne 0 ]]; then
-                      echo "One or more processes failed."
-                      exit 1
-                  else
-                      echo "All processes succeeded."
-                      exit 0
+                    echo "$1: Unhealthy - Used: $used_gpu, Reserved: $reserved_gpu"
+                    exit 1
                   fi
+                  
+                  # Check model health
+                  curl --silent --max-time 5 --fail-with-body http://localhost:8080/health
           startupProbe:
             failureThreshold: 40
             periodSeconds: 30
@@ -202,7 +167,8 @@ objects:
               name: http
               protocol: TCP
       workerSpec:
-        pipelineParallelSize: 1
+        pipelineParallelSize: 2
+        tensorParallelSize: 1
         containers:
           - name: worker-container
             image: quay.io/opendatahub/vllm@sha256:7f19dde68eb47abeea155f0d68d4e708f4d93cc91fc632b7a5a0de181d8d193b
@@ -246,8 +212,10 @@ objects:
               limits:
                 cpu: "16"
                 memory: 48Gi
+                nvidia.com/gpu: 1
               requests:
                 cpu: "8"
+                nvidia.com/gpu: 1
             livenessProbe:
               failureThreshold: 3
               periodSeconds: 5
@@ -258,10 +226,10 @@ objects:
                   - bash
                   - -c
                   - |
-                    # Check if the registered ray nodes count is the same as PIPELINE_PARALLEL_SIZE
-                    if [[ $(ray status | grep -c node_) -eq ${PIPELINE_PARALLEL_SIZE} ]]; then
-                      exit 0
-                    else
+                    # Check if the registered nodes count matches PIPELINE_PARALLEL_SIZE
+                    registered_node_count=$(ray status | grep -c node_)
+                    if [[ $registered_node_count -ne "$PIPELINE_PARALLEL_SIZE" ]]; then
+                      echo "Readiness Probe: Unhealthy - Registered nodes count ($registered_node_count) does not match PIPELINE_PARALLEL_SIZE ($PIPELINE_PARALLEL_SIZE)."
                       exit 1
                     fi
             startupProbe:
