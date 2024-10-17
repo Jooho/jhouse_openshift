@@ -12,3 +12,4 @@ spec:
         name: vLLM
       runtime: vllm-multinode-runtime
       storageUri: pvc://llama-3-8b-pvc/hf/8b_instruction_tuned
+    workerSpec: {}

@@ -16,3 +16,4 @@ spec:
         - containerPort: 8033
           name: h2c
           protocol: TCP
+    workerSpec: {}          
