@@ -101,7 +101,7 @@ objects:
                 - bash
                 - -c
                 - |
-                   # Check if the registered ray nodes count is the same as PIPELINE_PARALLEL_SIZE
+                  # Check if the registered ray nodes count is the same as PIPELINE_PARALLEL_SIZE
                   gpu_status=$(ray status | grep GPU)
                   if [[ -z $gpu_status ]]; then
                     echo "$1: GPU does not exist"
