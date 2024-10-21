@@ -62,9 +62,6 @@ objects:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            # GPU COUNT per NODE      
-            - name: TENSOR_PARALLEL_SIZE
-              value: "1"
             - name: DISTRIBUTED_EXECUTOR_BACKEND
               value: "ray"
             - name: DISABLE_CUSTOM_ALL_REDUCE
@@ -91,6 +88,9 @@ objects:
             requests:
               cpu: "8"
               nvidia.com/gpu: "1"
+          volumeMounts:
+            - name: shm
+              mountPath: /dev/shm    
           livenessProbe:
             failureThreshold: 3
             periodSeconds: 30
@@ -166,6 +166,11 @@ objects:
             - containerPort: 8080
               name: http
               protocol: TCP
+      volumes:
+        - name: shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 12Gi                  
       workerSpec:
         pipelineParallelSize: 2
         tensorParallelSize: 1
@@ -179,13 +184,13 @@ objects:
 
                 while true; do              
                   if (( SECONDS <= 120 )); then
-                    if ray health-check --address "${ISVC_NAME}-head.${POD_NAMESPACE}.svc.cluster.local:6379" > /dev/null 2>&1; then
+                    if ray health-check --address "${HEAD_SVC}.${POD_NAMESPACE}.svc.cluster.local:6379" > /dev/null 2>&1; then
                       echo "Global Control Service(GCS) is ready."
                       break
                     fi
                     echo "$SECONDS seconds elapsed: Waiting for Global Control Service(GCS) to be ready."
                   else
-                    if ray health-check --address "${ISVC_NAME}-head.${POD_NAMESPACE}.svc.cluster.local:6379"; then
+                    if ray health-check --address "${HEAD_SVC}.${POD_NAMESPACE}.svc.cluster.local:6379"; then
                       echo "Global Control Service(GCS) is ready. Any error messages above can be safely ignored."
                       break
                     fi
@@ -197,7 +202,7 @@ objects:
                 done
 
                 echo "Attempting to connect to Ray cluster at $RAY_HEAD_ADDRESS ..."
-                RAY_HEAD_ADDRESS="${ISVC_NAME}-head.${POD_NAMESPACE}.svc.cluster.local:6379"
+                RAY_HEAD_ADDRESS="${HEAD_SVC}.${POD_NAMESPACE}.svc.cluster.local:6379"
                 ray start --address="$RAY_HEAD_ADDRESS" --block
             env:
               - name: POD_NAME
@@ -216,6 +221,9 @@ objects:
               requests:
                 cpu: "8"
                 nvidia.com/gpu: "1"
+            volumeMounts:
+              - name: shm
+                mountPath: /dev/shm
             livenessProbe:
               failureThreshold: 3
               periodSeconds: 5
@@ -241,3 +249,8 @@ objects:
                 command:
                   - ray
                   - status
+        volumes:
+          - name: shm
+            emptyDir:
+              medium: Memory
+              sizeLimit: 12Gi    
