@@ -1,0 +1,6 @@
+export GATEWAY_API_VERSION=1.2.1
+export ENVOY_GATEWAY_VERSION=1.3.1
+
+export ROOT_DIR=/tmp
+export KSERVE_DIR=${ROOT_DIR}/kserve
+export KSERVE_ENABLE_SELF_SIGNED_CA=true
