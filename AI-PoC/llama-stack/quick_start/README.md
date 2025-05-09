@@ -22,13 +22,13 @@ ollama ps
 
 ## Deploy llama stack container connected with the running ollama server
 
-* Download template configuration
+* Check template configuration
 ~~~
-wget -L https://raw.githubusercontent.com/meta-llama/llama-stack/refs/heads/main/llama_stack/templates/ollama/run.yaml 
+wget https://raw.githubusercontent.com/meta-llama/llama-stack/refs/heads/main/llama_stack/templates/ollama/run.yaml 
 mv ./run.yaml /root/run.yaml
 ~~~
 
-* Run llama-stack 
+* Run llama-stack (the image already include the above template)
 ~~~
 export INFERENCE_MODEL="meta-llama/Llama-3.2-1B-Instruct"
 export LLAMA_STACK_PORT=8321
@@ -46,7 +46,7 @@ llamastack/distribution-ollama \
 
 * Check llama-stack health
 ~~~
-curl localhost:$LLAMA_STACK_PORT}/v1/health
+curl localhost:${LLAMA_STACK_PORT}/v1/health
 ~~~
 
 ## Test your first sample application with LLAMA Stack
@@ -61,6 +61,8 @@ pip3 install -r requirements.txt
 
 * Simple query using llama-stack-client cli
 ~~~
+pip install llama-stack-client
+
 llama-stack-client \
   inference chat-completion \
   --message "hello, what model are you?

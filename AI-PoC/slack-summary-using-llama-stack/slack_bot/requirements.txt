@@ -1,0 +1,5 @@
+slack-bolt==1.18.1
+python-dotenv==1.0.0
+flask==3.0.2
+gunicorn==21.2.0 
+requests==2.31.0
