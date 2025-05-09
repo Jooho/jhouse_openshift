@@ -1,0 +1,22 @@
+apiVersion: "serving.kserve.io/v1beta1"
+kind: "InferenceService"
+metadata:
+  name: sklearn-v2-iris-rest-v1-0
+  namespace: kserve-demo
+  annotations:
+    serving.kserve.io/autoscalerClass: none
+    serving.kserve.io/deploymentMode: RawDeployment
+  labels:
+    app: isvc.sklearn-v2-iris-rest-v1-0-predictor
+    component: predictor
+    disvc.group: sklearn-v2-iris-rest-v1
+    disvc: sklearn-v2-iris-rest
+    serving.kserve.io/inferenceservice: sklearn-v2-iris-rest-v1-0    
+spec:
+  predictor:
+    model:
+      modelFormat:
+        name: sklearn
+      storageUri: "gs://kfserving-examples/models/sklearn/1.0/model"   
+
+ 

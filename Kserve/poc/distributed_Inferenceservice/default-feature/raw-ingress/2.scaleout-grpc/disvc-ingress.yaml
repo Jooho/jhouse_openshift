@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+  name: sklearn-v2-iris-grpc
+  namespace: kserve-demo
+spec:
+  tls:
+  - hosts:
+      - sklearn-v2-iris-grpc-kserve-demo.example.com
+    secretName: grpc-tls
+  rules:
+  - host: sklearn-v2-iris-grpc-kserve-demo.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: sklearn-v2-iris-grpc-v1
+            port:
+              number: 80

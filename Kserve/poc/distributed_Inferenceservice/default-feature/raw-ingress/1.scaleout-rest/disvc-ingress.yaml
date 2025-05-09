@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sklearn-v2-iris-rest
+  namespace: kserve-demo
+spec:
+  rules:
+  - host: sklearn-v2-iris-rest-kserve-demo.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: sklearn-v2-iris-rest-v1
+            port:
+              number: 80

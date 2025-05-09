@@ -1,0 +1,22 @@
+apiVersion: "serving.kserve.io/v1beta1"
+kind: "InferenceService"
+metadata:
+  name: sklearn-v2-iris-grpc-v1-0
+  namespace: kserve-demo
+  annotations:
+    serving.kserve.io/autoscalerClass: none
+    serving.kserve.io/deploymentMode: RawDeployment
+spec:
+  predictor:
+    model:
+      args:
+        - --model_name=sklearn-v2-iris-grpc    
+      ports:
+        - containerPort: 8081
+          name: h2c
+          protocol: TCP
+      modelFormat:
+        name: sklearn
+      storageUri: "gs://kfserving-examples/models/sklearn/1.0/model"   
+
+ 
