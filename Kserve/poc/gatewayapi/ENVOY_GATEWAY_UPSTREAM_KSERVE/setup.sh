@@ -1,4 +1,4 @@
-source ../env.sh
+source ../hacks/env.sh
 
 # cluster
 kind create cluster
