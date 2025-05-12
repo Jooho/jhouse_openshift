@@ -65,7 +65,7 @@ pip install llama-stack-client
 
 llama-stack-client \
   inference chat-completion \
-  --message "hello, what model are you?
+  --message "hello, what model are you?"
 ~~~
 
 
@@ -75,6 +75,8 @@ llama-stack-client \
 - Send a simple quary to llama stack and stack will pass it to ollama
 - Show the response 
 ~~~
+pip install faiss-cpu
+
 python3 ./first_inference.py
 
 ...

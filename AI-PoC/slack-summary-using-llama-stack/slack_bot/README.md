@@ -66,6 +66,8 @@ This Slack bot collects and summarizes thread data, with future AI-powered summa
 9. Run the bot:
 
    ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate 
    python run.py
    ```
 
