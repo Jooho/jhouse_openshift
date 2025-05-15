@@ -1,0 +1,20 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: DistributedInferenceService
+metadata:
+  annotations:
+    serving.kserve.io/autoscalerClass: none
+    serving.kserve.io/deploymentMode: RawDeployment
+  name: sklearn-v2-iris-rest
+  namespace: kserve-demo
+spec:
+  annotations:
+    version: v2
+  inferenservice:
+    predictor:
+      model:
+        modelFormat:
+          name: sklearn
+        name: ""
+        protocolVersion: v2
+        runtime: kserve-sklearnserver
+        storageUri: "gs://kfserving-examples/models/sklearn/1.0/model"

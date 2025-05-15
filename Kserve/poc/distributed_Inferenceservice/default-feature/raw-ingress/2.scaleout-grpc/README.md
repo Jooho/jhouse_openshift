@@ -13,6 +13,7 @@ When DistributedInferenceService is created with a sample sklearn model, it shou
     ```
 - It expects to create the following objects by distributedInferenceService reconciler
   - [ISVC](./disvc-isvc1.yaml)
+  - [SVC](./disvc-svc.yaml)
   - [SVC](./disvc-v1-svc.yaml)
   - [INGRESS](./disvc-ingress.yaml)
   ~~~
