@@ -1,0 +1,16 @@
+apiVersion: serving.kserve.io/v1alpha1
+kind: LLMInferenceService
+metadata:
+  name: meta-llama-llama-3-2-3b-instruct
+  namespace: llmd-test-manual
+spec:
+  type: 'llm-d'
+  baseRefs:
+  - name: llm-d-config
+  model:
+    uri: "hf://meta-llama/Llama-3.2-3B-Instruct"
+  replicas: 1
+
+# It's very inconvenient to have to provide the same information twice for both prefill and decode. 
+# We should extract and apply these shared configurations separately. 
+# This includes annotations, labels, vLLM options, environment variables, and so on."
