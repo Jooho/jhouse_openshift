@@ -1,0 +1,19 @@
+(EngineCore pid=69) INFO 09-08 19:37:17 [default_loader.py:430] Loading weights took 0.24 seconds
+(EngineCore pid=69) INFO 09-08 19:37:18 [model_runner.py:380] Model loading took 0.24 GiB memory and 2.875028 seconds
+(EngineCore pid=69) INFO 09-08 19:37:18 [topk_topp_sampler.py:62] Using FlashInfer for top-p & top-k sampling.
+(EngineCore pid=69) INFO 09-08 19:37:21 [caching.py:343] reconstructed serializable fn from standalone compile artifacts. num_artifacts=3 num_submods=13
+(EngineCore pid=69) INFO 09-08 19:37:21 [decorators.py:311] Directly load AOT compilation from path /tmp/vllm/torch_compile_cache/torch_aot_compile/a9abc970d7110a0f12ab2a3b78291046a3d34468864aa5fea9dc43aff6f67809/rank_0_0/model
+(EngineCore pid=69) INFO 09-08 19:37:21 [monitor.py:53] torch.compile took 1.10 s in total
+(EngineCore pid=69) INFO 09-08 19:37:21 [monitor.py:81] Initial profiling/warmup run took 0.10 s
+(EngineCore pid=69) INFO 09-08 19:37:22 [gpu_worker.py:578] Available KV cache memory: 40.39 GiB
+(EngineCore pid=69) INFO 09-08 19:37:22 [kv_cache_utils.py:1869] GPU KV cache size: 1,176,416 tokens, Maximum concurrency for 2,048 tokens per request: 574.42x
+Capturing CUDA graphs (PIECEWISE): 100%|██████████| 51/51 [00:00<00:00, 71.91it/s]
+Capturing CUDA graphs (FULL): 100%|██████████| 35/35 [00:00<00:00, 95.26it/s]
+(EngineCore pid=69) INFO 09-08 19:37:24 [model_runner.py:906] Graph capturing finished in 2 secs, took 0.20 GiB
+(EngineCore pid=69) INFO 09-08 19:37:24 [gpu_worker.py:804] Free memory on device (43.97/44.39 GiB) on startup. Desired GPU memory utilization is (0.92, 40.84 GiB). Actual usage is 0.42 GiB for consumed memory (weights + non-torch), 0.03 GiB for peak activation, and 0.2 GiB for CUDAGraph memory. Replace gpu_memory_utilization config with `--kv-cache-memory=42996618220` (40.04 GiB) to fit into requested memory, or `--kv-cache-memory=46354596352` (43.17 GiB) to fully utilize gpu memory. Current kv cache memory in use is 40.39 GiB.
+(EngineCore pid=69) INFO 09-08 19:37:26 [jit_monitor.py:85] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+(EngineCore pid=69) INFO 09-08 19:37:26 [torch_utils.py:262] Reducing Torch threads from 4 to 1 for serving. Set OMP_NUM_THREADS in the external environment to override.
+(EngineCore pid=69) INFO 09-08 19:37:26 [core.py:347] init engine (profile, create kv cache, warmup model) took 7.77 s (compilation: 1.10 s)
+(EngineCore pid=69) INFO 09-08 19:37:26 [kernel.py:308] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+(APIServer pid=1) INFO 09-08 19:37:26 [api_server.py:653] Supported tasks: ['generate']
+(APIServer pid=1) INFO 09-08 19:37:27 [hf.py:551] Detected the chat template content format to be 'string'. You can set `--chat-template-content-format` to override this.

@@ -1,0 +1,38 @@
+(EngineCore pid=69) INFO 09-08 19:41:44 [parallel_state.py:1982] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank N/A, EPLB rank N/A
+(EngineCore pid=69) INFO 09-08 19:41:44 [gpu_worker.py:396] Using V2 Model Runner
+(EngineCore pid=69) INFO 09-08 19:41:45 [model_runner.py:358] Loading model from scratch...
+(EngineCore pid=69) INFO 09-08 19:41:46 [cuda.py:486] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=69) INFO 09-08 19:41:46 [flash_attn.py:866] Using FlashAttention version 2
+Loading pt checkpoint shards:   0% Completed | 0/1 [00:00<?, ?it/s]
+Loading pt checkpoint shards: 100% Completed | 1/1 [00:00<00:00,  3.30it/s]
+Loading pt checkpoint shards: 100% Completed | 1/1 [00:00<00:00,  3.30it/s]
+(EngineCore pid=69) 
+(EngineCore pid=69) INFO 09-08 19:41:46 [default_loader.py:430] Loading weights took 0.30 seconds
+(EngineCore pid=69) INFO 09-08 19:41:48 [model_runner.py:380] Model loading took 0.24 GiB memory and 2.808379 seconds
+(EngineCore pid=69) INFO 09-08 19:41:48 [topk_topp_sampler.py:62] Using FlashInfer for top-p & top-k sampling.
+(EngineCore pid=69) [rank0]:W0908 19:41:49.818000 69 torch/_inductor/triton_bundler.py:418] Directory /tmp/triton/tmp.1cc1a1a3-c4a5-4467-a008-40cf5f16cb99 is not empty - skipping!
+(EngineCore pid=69) [rank0]:W0908 19:41:49.821000 69 torch/_inductor/triton_bundler.py:418] Directory /tmp/triton/tmp.87c63e26-733e-42fb-9e2d-fb7fc81adf30 is not empty - skipping!
+(EngineCore pid=69) [rank0]:W0908 19:41:49.824000 69 torch/_inductor/triton_bundler.py:242] Failed to reload cubin file statically launchable autotuner triton_poi_fused_relu_1
+(EngineCore pid=69) [rank0]:W0908 19:41:49.824000 69 torch/_inductor/triton_bundler.py:242] Traceback (most recent call last):
+(EngineCore pid=69) [rank0]:W0908 19:41:49.824000 69 torch/_inductor/triton_bundler.py:242]   File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/triton_bundler.py", line 240, in load_autotuners
+(EngineCore pid=69) [rank0]:W0908 19:41:49.824000 69 torch/_inductor/triton_bundler.py:242]     compile_result.reload_cubin_path()
+(EngineCore pid=69) [rank0]:W0908 19:41:49.824000 69 torch/_inductor/triton_bundler.py:242]   File "/usr/local/lib/python3.12/dist-packages/torch/_inductor/runtime/triton_heuristics.py", line 2592, in reload_cubin_path
+(EngineCore pid=69) [rank0]:W0908 19:41:49.824000 69 torch/_inductor/triton_bundler.py:242]     raise RuntimeError(
+(EngineCore pid=69) [rank0]:W0908 19:41:49.824000 69 torch/_inductor/triton_bundler.py:242] RuntimeError: ('Cubin file saved by TritonBundler not found at %s', '/tmp/triton/MUVW75NWIZT2ZQ5CAGKB2HCDIB6O72GCTLCCMHU3EYLXB6RZHRNA/triton_poi_fused_relu_1.cubin')
+(EngineCore pid=69) INFO 09-08 19:41:50 [caching.py:343] reconstructed serializable fn from standalone compile artifacts. num_artifacts=3 num_submods=13
+(EngineCore pid=69) INFO 09-08 19:41:50 [decorators.py:311] Directly load AOT compilation from path /tmp/vllm/torch_compile_cache/torch_aot_compile/a9abc970d7110a0f12ab2a3b78291046a3d34468864aa5fea9dc43aff6f67809/rank_0_0/model
+(EngineCore pid=69) INFO 09-08 19:41:50 [monitor.py:53] torch.compile took 1.04 s in total
+(EngineCore pid=69) INFO 09-08 19:41:50 [monitor.py:81] Initial profiling/warmup run took 0.10 s
+(EngineCore pid=69) INFO 09-08 19:41:51 [gpu_worker.py:578] Available KV cache memory: 40.39 GiB
+(EngineCore pid=69) INFO 09-08 19:41:51 [kv_cache_utils.py:1869] GPU KV cache size: 1,176,416 tokens, Maximum concurrency for 2,048 tokens per request: 574.42x
+Capturing CUDA graphs (PIECEWISE): 100%|██████████| 51/51 [00:00<00:00, 76.19it/s]
+Capturing CUDA graphs (FULL): 100%|██████████| 35/35 [00:00<00:00, 100.92it/s]
+(EngineCore pid=69) INFO 09-08 19:41:53 [model_runner.py:906] Graph capturing finished in 1 secs, took 0.20 GiB
+(EngineCore pid=69) INFO 09-08 19:41:53 [gpu_worker.py:804] Free memory on device (43.97/44.39 GiB) on startup. Desired GPU memory utilization is (0.92, 40.84 GiB). Actual usage is 0.42 GiB for consumed memory (weights + non-torch), 0.03 GiB for peak activation, and 0.2 GiB for CUDAGraph memory. Replace gpu_memory_utilization config with `--kv-cache-memory=42996618220` (40.04 GiB) to fit into requested memory, or `--kv-cache-memory=46354596352` (43.17 GiB) to fully utilize gpu memory. Current kv cache memory in use is 40.39 GiB.
+(EngineCore pid=69) INFO 09-08 19:41:57 [jit_monitor.py:85] Kernel JIT monitor activated; monitored JIT compilations during inference will use mode=warn.
+(EngineCore pid=69) INFO 09-08 19:41:57 [torch_utils.py:262] Reducing Torch threads from 4 to 1 for serving. Set OMP_NUM_THREADS in the external environment to override.
+(EngineCore pid=69) INFO 09-08 19:41:57 [core.py:347] init engine (profile, create kv cache, warmup model) took 9.57 s (compilation: 1.04 s)
+(EngineCore pid=69) INFO 09-08 19:41:57 [kernel.py:308] Final IR op priority after setting platform defaults: IrOpPriorityConfig(rms_norm=['native'], fused_add_rms_norm=['native'])
+(APIServer pid=1) INFO 09-08 19:41:57 [api_server.py:653] Supported tasks: ['generate']
+(APIServer pid=1) INFO 09-08 19:41:58 [hf.py:551] Detected the chat template content format to be 'string'. You can set `--chat-template-content-format` to override this.
+(APIServer pid=1) INFO 09-08 19:41:58 [api_server.py:657] Starting vLLM server on http://0.0.0.0:8080
