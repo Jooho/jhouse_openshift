@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-proxy-config
+  namespace: openshift-ingress
+data:
+  deployment: |
+    spec:
+      template:
+        spec:
+          containers:
+          - name: istio-proxy
+            resources:
+              limits:
+                memory: 1024Mi
+              requests:
+                memory: 256Mi      
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: openshift-ai-inference
+  namespace: openshift-ingress
+spec:
+  gatewayClassName: openshift-default
+  listeners:
+   - name: http
+     port: 80
+     protocol: HTTP
+     allowedRoutes:
+       namespaces:
+         from: All
+  infrastructure:
+    parametersRef:
+      group: ""
+      kind: ConfigMap
+      name: gateway-proxy-config
+    labels:
+      serving.kserve.io/gateway: kserve-ingress-gateway                
