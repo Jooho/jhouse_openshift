@@ -1,3 +1,16 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: facebook-opt-125m-chat-template
+data:
+  chat-template.jinja: |
+    {% for message in messages %}
+    {{ message['role'] + ': ' + message['content'] + '\n' }}
+    {% endfor %}
+    {% if add_generation_prompt %}
+    {{ 'assistant: ' }}
+    {% endif %}
+---
 apiVersion: serving.kserve.io/v1alpha2
 kind: LLMInferenceService
 metadata:
@@ -14,9 +27,21 @@ spec:
         namespace: openshift-ingress
     route: {}
   template:
+    volumes:
+      - name: chat-template
+        configMap:
+          name: facebook-opt-125m-chat-template
     containers:
       - name: main
-        image: docker.io/vllm/vllm-openai-cpu:v0.23.0
+        image: docker.io/vllm/vllm-openai-cpu:v0.28.0
+        args:
+          - --chat-template
+          - /tmp/chat-template.jinja
+        volumeMounts:
+          - name: chat-template
+            mountPath: /tmp/chat-template.jinja
+            subPath: chat-template.jinja
+            readOnly: true
         securityContext:
           runAsNonRoot: false
         env:

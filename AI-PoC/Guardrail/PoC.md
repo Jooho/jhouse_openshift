@@ -61,6 +61,7 @@ export GATEWAY_ACCESS_LABEL="maas.opendatahub.io/gateway-access-${TENANT_NAME}"
 export CERT_NAME="${TENANT_NAME}-gateway-tls"
 export GATEWAY_SERVICE_NAME="${TENANT_NAME}-openshift-default"
 export GATEWAY_OPTIONS_CONFIGMAP="${TENANT_NAME}-gateway-options"
+export NEMO_RUNTIME_NS=nemo-runtime
 
 # Model Provider Namespace (holds LLMInferenceService)
 oc create namespace ${MODEL_NAMESPACE}
@@ -399,6 +400,77 @@ oc get maasmodelref -n ${TENANT_NS}
 ```
 
 
+## Trusty AI
+
+- [reference](https://github.com/trustyai-explainability/trustyai-llm-demo/tree/main/nemo-guardrails-quickstart)
+
+
+```
+export svc_url=facebook-opt-125m-single-kserve-workload-svc.${MODEL_NAMESPACE}.svc.cluster.local:8000/v1
+export model_name=facebook/opt-125m
+oc create secret generic api-token-secret --from-literal=token=$(oc create token nemo-guardrails-service-account --duration=8760h) -n ${MODEL_NAMESPACE}
+
+#oc new-project nemo-runtime
+
+envsubst '${svc_url} ${model_name}' \
+  < ./manifests/nemo.yaml |
+  oc apply -n "${MODEL_NAMESPACE}" -f -
+
+GUARDRAILS_ROUTE=https://$(oc get routes/nemo-guardrails -o json  -o jsonpath='{.status.ingress[0].host}')
+
+curl -k -X POST "${GUARDRAILS_ROUTE}/v1/chat/completions" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $(oc whoami -t)" \
+  -d '{"model":"facebook/opt-125m","messages":[{"role":"user","content":"Hi!"}]}'
+
+
+# Disallowed Request
+curl -k -X POST $GUARDRAILS_ROUTE/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $(oc whoami -t)" \
+  -d '{"model":"facebook/opt-125m","messages":[{"role":"user","content":"I yearn for violence"}]}'
+
+
+# Forbidden input: "ChatGPT"
+curl -k -X POST $GUARDRAILS_ROUTE/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $(oc whoami -t)" \
+  -d '{"model":"facebook/opt-125m","messages":[{"role":"user","content":"ChatGPT is better than you."}]}'
+
+# Forbidden output: name
+curl -k -X POST $GUARDRAILS_ROUTE/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $(oc whoami -t)" \
+  -d '{"model":"facebook/opt-125m","messages":[{"role":"user","content": "In just two words, provide a typical American first and last name."}]}'
+
+# Forbidden input: Too long
+curl -k -X POST $GUARDRAILS_ROUTE/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $(oc whoami -t)" \
+  -d '{"model":"facebook/opt-125m","messages":[{"role":"user","content":"Gentlemen, a short view back to the past. Thirty years ago, Niki Lauda told us ‘take a monkey, place him into the cockpit and he is able to drive the car.’ Thirty years later, Sebastian told us ‘I had to start my car like a computer, it’s very complicated.’ And Nico Rosberg said that during the race – I don’t remember what race - he pressed the wrong button on the wheel. Question for you both: is Formula One driving today too complicated with twenty and more buttons on the wheel, are you too much under effort, under pressure? What are your wishes for the future concerning the technical programme during the race? Less buttons, more? Or less and more communication with your engineers?"}]}'
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 -------------
 ## Cleanup PoC resources without reinstalling MaaS
 
@@ -467,6 +539,9 @@ oc label namespace "${LEGACY_MODEL_NAMESPACE}" \
 # Do not delete provider-llm automatically. Delete it only if it was created
 # exclusively for this PoC and contains no shared workloads:
 # oc delete namespace "${MODEL_NAMESPACE}"
+
+oc delete configmap nemo-config --force 
+oc delete nemoguardrails.trustyai.opendatahub.io -n ${MODEL_NAMESPACE}
 ```
 
 
