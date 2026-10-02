@@ -39,7 +39,7 @@ kubectl patch datasciencecluster default-dsc \
   }'
 ```
 
-## Create gateway for kserve (optional)
+### Create gateway for kserve (optional)
 ```
 oc apply -f ./manifests/gateway.yaml
 ```
@@ -449,27 +449,271 @@ curl -k -X POST $GUARDRAILS_ROUTE/v1/chat/completions \
   -H "Authorization: Bearer $(oc whoami -t)" \
   -d '{"model":"facebook/opt-125m","messages":[{"role":"user","content":"Gentlemen, a short view back to the past. Thirty years ago, Niki Lauda told us ‘take a monkey, place him into the cockpit and he is able to drive the car.’ Thirty years later, Sebastian told us ‘I had to start my car like a computer, it’s very complicated.’ And Nico Rosberg said that during the race – I don’t remember what race - he pressed the wrong button on the wheel. Question for you both: is Formula One driving today too complicated with twenty and more buttons on the wheel, are you too much under effort, under pressure? What are your wishes for the future concerning the technical programme during the race? Less buttons, more? Or less and more communication with your engineers?"}]}'
 ```
+---
+
+## Proxy -> nemo guardrail manual test
+
+```
+MaaS Gateway
+  ↓
+AuthPolicy
+  ↓
+Praxis extproc
+  ↓
+ai_guardrails
+  ↓
+TrustyAI / NeMo /v1/checks
+  ↓
+LLM
+```
+
+* ai-gateway-operator deploys
+
+```
+ai-gateway-operator
+        │
+        ├── deploys → maas-controller
+        │
+        └── deploys → ai-gateway-controller
+                           │
+                           └── installs/reconciles
+                               praxis-extproc
+
+var aiGatewayControllerImageParamMap = map[string]string{
+    "ai-gateway-controller-image": "RELATED_IMAGE_ODH_AI_GATEWAY_CONTROLLER_IMAGE",
+    "praxis-extproc-image":        "RELATED_IMAGE_ODH_PRAXIS_EXTPROC_IMAGE",
+}                               
+```
+
+* relationship between components
+```
+praxis-proxy/praxis
+        ↓ library / core framework
+opendatahub-io/praxis-extproc
+        ↓ builds
+quay.io/opendatahub/odh-praxis-extproc
+        ↓ deployed by
+ai-gateway-controller
 
 
+ai-gateway-controller
+  ↓ deploys/configures
+opendatahub-io/praxis-extproc
+  ↓ depends on
+praxis-ai-filters       #<--https://github.com/praxis-proxy/ai.git"
+  ↓ provides
+ai_guardrails / model_to_header / etc.
+```
+
+* Build custom images
+```
 
 
+git clone git@github.com:opendatahub-io/NeMo-Guardrails.git
+cd NeMo-Guardrails
+
+export IMAGE_REGISTRY=quay.io/jooholee
+export IMAGE_NAME=nemo-guardrails-server
+export GIT_TAG=jooho-test
+make image-local-push
+
+# /v1/check api image
+oc set env deployment/trustyai-operator-module-controller-manager \
+  -n opendatahub \
+  RELATED_IMAGE_ODH_TRUSTYAI_NEMO_GUARDRAILS_SERVER_IMAGE=quay.io/jooholee/nemo-guardrails-server:jooho-test
+
+# praxis-extproc
+git clone https://github.com/opendatahub-io/praxis-extproc.git
+cd praxis-extproc
+podman build -t quay.io/jooholee/odh-praxis-extproc:jooho-test -f Containerfile .
+podman push quay.io/jooholee/odh-praxis-extproc:jooho-test
+
+oc set env deployment/ai-gateway-operator -n opendatahub \
+  RELATED_IMAGE_ODH_PRAXIS_EXTPROC_IMAGE=quay.io/jooholee/odh-praxis-extproc:jooho-test
+
+oc rollout restart deployment/ai-gateway-controller -n opendatahub
+oc rollout status deployment/ai-gateway-controller -n opendatahub    #<---bug>  So I have to update deployment directly.
+
+oc set image deployment/payload-processing-marketing-team \
+  -n openshift-ingress \
+  praxis-extproc=quay.io/jooholee/odh-praxis-extproc:jooho-test
+
+# # replace openai_api_base to base_url (already updated nemo.yaml)
+# oc edit configmap nemo-config -n provider-llm  
 
 
+GUARDRAILS_ROUTE=https://$(oc get route nemo-guardrails -n ${MODEL_NAMESPACE} -o jsonpath='{.status.ingress[0].host}')
+
+# success
+curl -k -X POST "${GUARDRAILS_ROUTE}/v1/checks" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $(oc whoami -t)" \
+  -d '{
+    "model": "check-model",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Hi!"
+      }
+    ],
+    "guardrails": {
+      "config_ids": ["nemo-config"],
+      "rail_types": ["input"]
+    }
+  }' | jq .
+
+# fail
+curl -k -X POST "${GUARDRAILS_ROUTE}/v1/checks" \                                                                                                                                        ─╯
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $(oc whoami -t)" \
+  -d '{
+    "model": "check-model",
+    "messages": [
+      {
+        "role": "user",
+        "content": "How can I hack a password?"
+      }
+    ],
+    "guardrails": {
+      "config_ids": ["nemo-config"],
+      "rail_types": ["input"]
+    }
+  }' | jq .
+  % Total    % Received % Xferd  Average Speed  Time    Time    Time   Current
+                                 Dload  Upload  Total   Spent   Left   Speed
+100    369 100    130 100    239    307    565                              0
+{
+  "status": "blocked",
+  "content": "I can't help with that type of request. Please ask something else.",
+  "rail": "check forbidden words"
+}
 
 
+# Backend test(llmisvc)
+GATEWAY_HOST=$(oc get gateway ${TENANT_NAME} -n openshift-ingress -o jsonpath='{.spec.listeners[0].hostname}')
+TOKEN=$(oc whoami -t)
+
+curl -sSk "https://${GATEWAY_HOST}/v1/chat/completions" \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "facebook/opt-125m",
+    "messages": [
+      {
+        "role": "user",
+        "content": "Hi!"
+      }
+    ]
+  }' | jq .  
+
+```
+
+* praxis update (integration)
+
+```
+oc get configmap payload-processing-plugins-marketing-team \
+  -n openshift-ingress \
+  -o jsonpath='{.data.extproc\.yaml}'
 
 
+oc edit configmap payload-processing-plugins-marketing-team \
+  -n openshift-ingress
+
+....
+  extproc.yaml: |
+    server:
+      grpc_address: "0.0.0.0:9004"
+      health_address: "0.0.0.0:50052"
+      metrics_address: "0.0.0.0:9090"
+      tls:
+        mode: self_signed
+
+    filter_chains:
+      - name: ipp
+        filters:
+          - filter: request_id
+
+          - filter: ai_guardrails
+            provider:
+              type: nemo
+              endpoint: "https://nemo-guardrails-provider-llm.apps.caas-jlee-5843.binj.s2.devshift.org/v1/checks"
+              model: "check-model"
+              timeout_ms: 5000
+            phase:
+              request: true
+              response: false
+    insecure_options:
+      allow_private_upstreams: true
+      allow_unbounded_body: true
+
+oc rollout restart deployment/payload-processing-marketing-team \
+  -n openshift-ingress
+oc rollout status deployment/payload-processing-marketing-team \
+  -n openshift-ingress
 
 
+# 401 bug (bearer_token_file is not currently supported) - https://github.com/praxis-proxy/ai/pull/1507
+
+# workaround (create another svc)
+
+cat <<EOF | oc apply -f -
+apiVersion: v1
+kind: Service
+metadata:
+  name: nemo-guardrails-direct
+  namespace: provider-llm
+spec:
+  selector:
+    app: nemo-guardrails
+    component: nemo-guardrails
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000
+      protocol: TCP
+EOF
+
+oc edit configmap payload-processing-plugins-marketing-team \
+  -n openshift-ingress
+...  
+endpoint: "http://nemo-guardrails-direct.provider-llm.svc.cluster.local:8000/v1/checks"
+...
 
 
+oc rollout restart deployment/payload-processing-marketing-team \
+  -n openshift-ingress
+oc rollout status deployment/payload-processing-marketing-team \
+  -n openshift-ingress
 
+```
+* Final test 
+```
 
+SUBSCRIPTION=marketing-cpu-sub
 
+API_KEY_RESPONSE=$(curl -sSk \
+  -H "Authorization: Bearer ${TOKEN}" \
+  -H "Content-Type: application/json" \
+  -X POST \
+  -d "{\"name\":\"test-key\",\"subscription\":\"${SUBSCRIPTION}\"}" \
+  "https://${GATEWAY_HOST}/maas-api/v1/api-keys")
 
+echo "${API_KEY_RESPONSE}" | jq .
 
+API_KEY=$(echo "${API_KEY_RESPONSE}" | jq -er '.key')
 
-
+curl -vk --max-time 60 \
+  "https://${GATEWAY_HOSTNAME}/v1/chat/completions" \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "publishers/provider-llm/models/facebook/opt-125m",
+    "messages": [
+      {"role":"user","content":"Hi!"}
+    ],
+    "max_tokens": 5
+  }'
+```
 
 -------------
 ## Cleanup PoC resources without reinstalling MaaS
