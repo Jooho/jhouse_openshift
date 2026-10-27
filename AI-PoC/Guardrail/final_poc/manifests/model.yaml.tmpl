@@ -1,0 +1,97 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: facebook-opt-125m-chat-template
+  namespace: ${MODEL_NAMESPACE}
+data:
+  chat-template.jinja: |
+    {% for message in messages %}
+    {{ message['role'] + ': ' + message['content'] + '\n' }}
+    {% endfor %}
+    {% if add_generation_prompt %}
+    {{ 'assistant: ' }}
+    {% endif %}
+---
+apiVersion: serving.kserve.io/v1alpha2
+kind: LLMInferenceService
+metadata:
+  name: facebook-opt-125m-single
+  namespace: ${MODEL_NAMESPACE}
+spec:
+  model:
+    uri: hf://facebook/opt-125m
+    name: facebook/opt-125m
+  replicas: 1
+  router:
+    gateway:
+      refs:
+      - name: ${TENANT_NAME}
+        namespace: ${GATEWAY_NAMESPACE}
+    route: {}
+  template:
+    volumes:
+    - name: chat-template
+      configMap:
+        name: facebook-opt-125m-chat-template
+    containers:
+    - name: main
+      image: docker.io/vllm/vllm-openai-cpu:v0.28.0
+      args:
+      - --chat-template
+      - /tmp/chat-template.jinja
+      volumeMounts:
+      - name: chat-template
+        mountPath: /tmp/chat-template.jinja
+        subPath: chat-template.jinja
+        readOnly: true
+      securityContext:
+        runAsNonRoot: false
+      env:
+      - name: VLLM_CPU_KVCACHE_SPACE
+        value: "1"
+      resources:
+        limits:
+          cpu: "1"
+          memory: 10Gi
+        requests:
+          cpu: 100m
+          memory: 8Gi
+---
+apiVersion: maas.opendatahub.io/v1alpha1
+kind: MaaSModelRef
+metadata:
+  name: ${MODEL_REF_NAME}
+  namespace: ${MODEL_NAMESPACE}
+spec:
+  modelRef:
+    kind: LLMInferenceService
+    name: facebook-opt-125m-single
+---
+apiVersion: maas.opendatahub.io/v1alpha1
+kind: MaaSSubscription
+metadata:
+  name: marketing-cpu-sub
+  namespace: ${TENANT_NAMESPACE}
+spec:
+  owner:
+    groups:
+    - name: system:authenticated
+  modelRefs:
+  - name: ${MODEL_REF_NAME}
+    namespace: ${MODEL_NAMESPACE}
+    tokenRateLimits:
+    - limit: 1000
+      window: 1m
+---
+apiVersion: maas.opendatahub.io/v1alpha1
+kind: MaaSAuthPolicy
+metadata:
+  name: marketing-cpu-access
+  namespace: ${TENANT_NAMESPACE}
+spec:
+  modelRefs:
+  - name: ${MODEL_REF_NAME}
+    namespace: ${MODEL_NAMESPACE}
+  subjects:
+    groups:
+    - name: system:authenticated

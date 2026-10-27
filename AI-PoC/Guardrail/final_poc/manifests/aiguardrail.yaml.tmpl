@@ -1,0 +1,16 @@
+apiVersion: aigateway.opendatahub.io/v1alpha1
+kind: AIGuardrail
+metadata:
+  name: marketing-privacy
+  namespace: ${TENANT_NAMESPACE}
+spec:
+  provider:
+    nemo:
+      ref:
+        name: nemo-guardrails
+    timeout: 5s
+  checks:
+  - name: privacy
+    configId: marketing-rails
+    phases:
+    - Input
