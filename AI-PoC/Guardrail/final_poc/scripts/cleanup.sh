@@ -77,9 +77,9 @@ uninstall_helm_release() {
 echo "Cleaning up Guardrail PoC tenant: ${TENANT_NAME}"
 
 # The last resources created by the PoC.
-delete nemoguardrails nemo-guardrails -n "$TENANT_NAMESPACE"
-delete configmap nemo-config -n "$TENANT_NAMESPACE"
-delete secret api-token-secret -n "$TENANT_NAMESPACE"
+delete nemoguardrails nemo-noauth -n "$TENANT_NAMESPACE"
+delete configmap nemo-noauth-config -n "$TENANT_NAMESPACE"
+delete secret api-token-noauth-secret -n "$TENANT_NAMESPACE"
 
 # The model attachment and model runtime are external to the tenant namespace.
 delete maasmodelref facebook-opt-125m-single-ref -n "$MODEL_NAMESPACE"

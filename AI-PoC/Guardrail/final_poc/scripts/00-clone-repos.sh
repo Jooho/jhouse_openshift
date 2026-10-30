@@ -64,7 +64,7 @@ checkout_main \
 checkout_pull_request \
     https://github.com/opendatahub-io/ai-gateway-controller.git \
     "${AI_GATEWAY_REPO_PATH}" \
-    159
+    191
 checkout_main \
     https://github.com/opendatahub-io/ai-gateway-operator.git \
     "${AI_GATEWAY_OPERATOR_REPO_PATH}"

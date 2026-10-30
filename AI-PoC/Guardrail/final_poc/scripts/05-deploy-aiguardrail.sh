@@ -7,7 +7,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=common.sh
 source "${SCRIPT_DIR}/common.sh"
-export TENANT_NAMESPACE MODEL_NAMESPACE
+export TENANT_NAMESPACE MODEL_NAMESPACE NEMO_PROVIDER_NAME
 
 envsubst < "${POC_DIR}/manifests/aiguardrail.yaml.tmpl" | oc apply -f -
 oc patch maassubscription marketing-cpu-sub -n "${TENANT_NAMESPACE}" --type=merge \

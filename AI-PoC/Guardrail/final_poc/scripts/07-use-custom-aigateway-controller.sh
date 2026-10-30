@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# Configure custom AI Gateway Controller and Praxis images through ODH OLM config.
+# Configure custom AI Gateway, TrustyAI, and Praxis images through ODH OLM config.
 
 set -euo pipefail
 
@@ -89,15 +89,21 @@ wait_for_praxis() {
 subscription_env="$(oc get subscription "${ODH_SUBSCRIPTION_NAME}" -n "${ODH_OPERATOR_NAMESPACE}" -o json | \
   jq -c \
     --arg controller_image "${AI_GATEWAY_CONTROLLER_IMAGE}" \
-    --arg praxis_image "${PRAXIS_EXTPROC_IMAGE}" '
+    --arg praxis_image "${PRAXIS_EXTPROC_IMAGE}" \
+    --arg trustyai_module_image "${TRUSTYAI_MODULE_OPERATOR_IMAGE}" \
+    --arg trustyai_service_image "${TRUSTYAI_SERVICE_OPERATOR_IMAGE}" '
       (.spec.config.env // [])
       | map(select(
           .name != "RELATED_IMAGE_ODH_AI_GATEWAY_CONTROLLER_IMAGE" and
-          .name != "RELATED_IMAGE_ODH_PRAXIS_EXTPROC_IMAGE"
+          .name != "RELATED_IMAGE_ODH_PRAXIS_EXTPROC_IMAGE" and
+          .name != "RELATED_IMAGE_ODH_TRUSTYAI_MODULE_OPERATOR_IMAGE" and
+          .name != "RELATED_IMAGE_ODH_TRUSTYAI_SERVICE_OPERATOR_IMAGE"
         ))
       + [
           {name: "RELATED_IMAGE_ODH_AI_GATEWAY_CONTROLLER_IMAGE", value: $controller_image},
-          {name: "RELATED_IMAGE_ODH_PRAXIS_EXTPROC_IMAGE", value: $praxis_image}
+          {name: "RELATED_IMAGE_ODH_PRAXIS_EXTPROC_IMAGE", value: $praxis_image},
+          {name: "RELATED_IMAGE_ODH_TRUSTYAI_MODULE_OPERATOR_IMAGE", value: $trustyai_module_image},
+          {name: "RELATED_IMAGE_ODH_TRUSTYAI_SERVICE_OPERATOR_IMAGE", value: $trustyai_service_image}
         ]
     ')"
 
@@ -112,12 +118,18 @@ wait_for_deployment_env "${ODH_OPERATOR_NAMESPACE}" "${ODH_OPERATOR_DEPLOYMENT}"
   "RELATED_IMAGE_ODH_AI_GATEWAY_CONTROLLER_IMAGE" "${AI_GATEWAY_CONTROLLER_IMAGE}"
 wait_for_deployment_env "${ODH_OPERATOR_NAMESPACE}" "${ODH_OPERATOR_DEPLOYMENT}" \
   "RELATED_IMAGE_ODH_PRAXIS_EXTPROC_IMAGE" "${PRAXIS_EXTPROC_IMAGE}"
+wait_for_deployment_env "${ODH_OPERATOR_NAMESPACE}" "${ODH_OPERATOR_DEPLOYMENT}" \
+  "RELATED_IMAGE_ODH_TRUSTYAI_MODULE_OPERATOR_IMAGE" "${TRUSTYAI_MODULE_OPERATOR_IMAGE}"
+wait_for_deployment_env "${ODH_OPERATOR_NAMESPACE}" "${ODH_OPERATOR_DEPLOYMENT}" \
+  "RELATED_IMAGE_ODH_TRUSTYAI_SERVICE_OPERATOR_IMAGE" "${TRUSTYAI_SERVICE_OPERATOR_IMAGE}"
 wait_for_deployment_image "${ODH_NAMESPACE}" "ai-gateway-operator" "${AI_GATEWAY_OPERATOR_IMAGE}"
 wait_for_deployment_env "${ODH_NAMESPACE}" "ai-gateway-operator" \
   "RELATED_IMAGE_ODH_AI_GATEWAY_CONTROLLER_IMAGE" "${AI_GATEWAY_CONTROLLER_IMAGE}"
 wait_for_deployment_env "${ODH_NAMESPACE}" "ai-gateway-operator" \
   "RELATED_IMAGE_ODH_PRAXIS_EXTPROC_IMAGE" "${PRAXIS_EXTPROC_IMAGE}"
 wait_for_deployment_image "${ODH_NAMESPACE}" "ai-gateway-controller" "${AI_GATEWAY_CONTROLLER_IMAGE}"
+wait_for_deployment_image "${ODH_NAMESPACE}" "trustyai-operator-module-controller-manager" "${TRUSTYAI_MODULE_OPERATOR_IMAGE}"
+wait_for_deployment_image "${ODH_NAMESPACE}" "trustyai-service-operator-controller-manager" "${TRUSTYAI_SERVICE_OPERATOR_IMAGE}"
 wait_for_praxis
 
-echo "Custom AI Gateway Controller and Praxis ext-proc images are ready."
+echo "Custom AI Gateway Controller, TrustyAI operators, and Praxis ext-proc images are ready."

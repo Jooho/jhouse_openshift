@@ -16,7 +16,8 @@ oc create secret generic api-token-secret -n "${TENANT_NAMESPACE}" \
   --from-literal=token="${NEMO_OPENAI_API_KEY}" \
   --dry-run=client -o yaml | oc apply -f -
 export TENANT_NAMESPACE MODEL_BASE_URL MODEL_NAME
-envsubst < "${POC_DIR}/manifests/nemo.yaml.tmpl" | oc apply -f -
+envsubst '${TENANT_NAMESPACE} ${MODEL_BASE_URL} ${MODEL_NAME}' \
+  < "${POC_DIR}/manifests/nemo.yaml.tmpl" | oc apply -f -
 
 for _ in $(seq 1 90); do
   endpoint="$(oc get nemoguardrails nemo-guardrails -n "${TENANT_NAMESPACE}" -o jsonpath='{.status.endpoint}')"

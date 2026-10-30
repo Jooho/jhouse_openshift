@@ -28,7 +28,7 @@ The script clones the current `models-as-a-service`, Praxis ExtProc, AI Gateway 
 - ODH Operator `main`
 - TrustyAI Service Operator [PR #973](https://github.com/trustyai-explainability/trustyai-service-operator/pull/973)
 - Praxis AI [PR #1507](https://github.com/praxis-proxy/ai/pull/1507)
-- AI Gateway Controller [PR #159](https://github.com/opendatahub-io/ai-gateway-controller/pull/159)
+- AI Gateway Controller [PR #191](https://github.com/opendatahub-io/ai-gateway-controller/pull/191)
 
 `common.sh` is the only place that defines local checkout paths, the demo tenant, image registry user, and image tag. Set overrides before sourcing it.
 
@@ -97,11 +97,24 @@ Build and push images to a registry reachable by the cluster. Example:
   cd "${TRUSTYAI_SERVICE_OPERATOR_REPO_PATH}"
   make BUILD_TOOL=podman IMG="${TRUSTYAI_SERVICE_OPERATOR_IMAGE}" docker-build docker-push
 )
+
+(
+  cd "${TRUSTYAI_SERVICE_OPERATOR_REPO_PATH}"
+  make BUILD_TOOL=podman \
+    TRUSTYAI_MODULE_IMG="quay.io/${QUAY_USER}/trustyai-module-operator" \
+    MODULE_TAG="${IMAGE_TAG}" docker-build-tom docker-push-tom
+)
 ```
 
 `USE_LOCAL=true` makes the AI Gateway operator gather manifests from the adjacent MaaS and AI Gateway Controller checkouts. The resulting operator image therefore contains their current local manifest revisions, including MaaS RBAC.
 
 The `praxis-ai` image builds PR #1507 and is kept as an explicit PoC artifact. The ODH Gateway data plane currently deploys `praxis-extproc`, not this standalone image. Building it does not by itself place it on the request path.
+
+The TrustyAI PR #973 checkout contains two different controllers. The repository
+root builds the workload `trustyai-service-operator` image, while the
+`docker-build-tom` target builds the platform-facing module controller from the
+same checkout. Both images are intentional: ODH runs the module controller, and
+the module deploys the workload operator from the service-operator image.
 
 ## 2. Build a custom ODH Operator catalog
 
@@ -138,30 +151,15 @@ The OLM Subscription configuration is immutable after creation. Install a fresh 
 )
 ```
 
-* Enable TrustyAI
+Enable the TrustyAI component in the DSC, then run `07-use-custom-aigateway-controller.sh` after the platform is installed:
 
 ```bash
-oc patch subscription opendatahub-operator -n opendatahub-operator-system --type=json -p='[
-  {"op":"add","path":"/spec/config/env/-","value":{
-    "name":"RELATED_IMAGE_ODH_TRUSTYAI_MODULE_OPERATOR_IMAGE",
-    "value":"quay.io/opendatahub/odh-trustyai-module-operator:odh-stable"}},
-  {"op":"add","path":"/spec/config/env/-","value":{
-    "name":"RELATED_IMAGE_ODH_TRUSTYAI_SERVICE_OPERATOR_IMAGE",
-    "value":"quay.io/jooholee/trustyai-service-operator:guardrail-poc"}}]'
-
-kubectl patch datasciencecluster default-dsc \
-  --type=merge \
-  -p '{
-    "spec": {
-      "components": {
-        "trustyai": {
-          "managementState": "Managed"
-        }
-      }
-    }
-  }'
+oc patch datasciencecluster default-dsc --type=merge -p \
+  '{"spec":{"components":{"trustyai":{"managementState":"Managed"}}}}'
+./scripts/07-use-custom-aigateway-controller.sh
 ```
-Do not use `--operator-image`, which patches the installed ODH CSV. Do not patch the ODH CSV, the AI Gateway operator Deployment, a rendered MaaS Deployment, or a generated parameter ConfigMap. The custom catalog supplies the ODH Operator, while the ODH operator passes the three component image values to the AI Gateway operator when it creates the Subscription.
+
+That script patches the ODH Subscription with the custom TrustyAI service-operator and module-operator images as well as the AI Gateway and Praxis images. Do not patch the ODH CSV, the AI Gateway operator Deployment, a rendered MaaS Deployment, or a generated parameter ConfigMap.
 
 Verify the images installed through OLM before creating tenant resources:
 
@@ -264,21 +262,68 @@ The value must match `${MAAS_API_IMAGE}`.
 
 This deploys the small CPU OPT model, creates a `MaaSModelRef`, subscription, and access policy, then waits for the model reference to become usable.
 
-## 6. Deploy NeMo and an AIGuardrail
+## 6. Deploy the no-auth NeMo provider and an AIGuardrail
 
 The NeMo provider calls the model through the tenant Gateway. Provide a token that is valid for the demo subscription:
 
 ```bash
 export NEMO_OPENAI_API_KEY="$(oc whoami -t)"
-./scripts/04-deploy-nemo.sh
+./scripts/04-deploy-nemo-noauth.sh
 ./scripts/05-deploy-aiguardrail.sh
 ```
 
-`05-deploy-aiguardrail.sh` waits for `AIGuardrail.status.conditions[Accepted]` to become `True`. It does not patch status. The controller validates the NeMo provider reference, its allowed-consumer policy, the named NeMo config, and the published HTTPS endpoint before accepting the policy.
+The initial PoC uses a separate `nemo-noauth` provider. It keeps the existing
+`nemo-guardrails` CR untouched for the later HTTPS/authenticated phase. The
+no-auth provider has no Route and no `status.endpoint`; AI Gateway Controller
+PR #191 derives its in-cluster HTTP endpoint from the provider name and
+`status.workloadNamespace`.
 
-The installed TrustyAI CRD currently has no `allowedConsumers` field. The NeMo provider is therefore created in the tenant namespace, which satisfies the default same-namespace consumer rule.
+`05-deploy-aiguardrail.sh` points `marketing-privacy` at `nemo-noauth` by
+default and waits for `AIGuardrail.status.conditions[Accepted]` to become
+`True`. It does not patch status. The controller validates the NeMo provider
+reference, its allowed-consumer policy, and the named NeMo config.
 
-## 7. Verify selection and rendered headers
+The original authenticated provider remains available but is not created by
+the default PoC path. After the no-auth flow works, apply
+`manifests/nemo.yaml.tmpl`, point `marketing-privacy` back to
+`nemo-guardrails`, and repeat the checks to validate HTTPS/authenticated
+operation.
+
+The no-auth manifest includes `allowedConsumers.namespaces.from: All` when the
+installed TrustyAI CRD supports that field. If the field is not present in the
+installed CRD schema, it is ignored and the provider still works because it is
+created in the same tenant namespace as the AIGuardrail.
+
+## 7. Verify NeMo directly
+
+Run the NeMo check endpoint before testing the Gateway data path:
+
+```bash
+./scripts/04-verify-nemo-checks.sh
+```
+
+The script port-forwards the no-auth NeMo Service and sends two requests to
+`/v1/checks` using the `marketing-rails` configuration. The allowed message
+must return HTTP 200 with `status: passed`. The message containing `forbidden`
+must return HTTP 200 with `status: blocked` and a non-empty `rail` value. NeMo
+reports a blocked check in the response body; it does not use HTTP 403 for this
+endpoint.
+
+If this step fails, fix the NeMo configuration before testing Praxis or the Gateway. In particular, the `rails.co` syntax and the `config.yaml` Colang version must match the NeMo runtime.
+
+The route name, configuration ID, and model can be overridden when needed:
+
+```bash
+NEMO_CONFIG_ID=marketing-rails \
+NEMO_MODEL=check-model \
+./scripts/04-verify-nemo-checks.sh
+```
+
+For the later authenticated provider phase, set
+`NEMO_PROVIDER_NAME=nemo-guardrails` and use the authenticated manifest before
+running the verification again.
+
+## 8. Verify selection and rendered headers
 
 ```bash
 ./scripts/06-verify-selection-and-headers.sh
@@ -291,19 +336,20 @@ The verification has two independent checks:
 
 These checks prove the control-plane handoff. A success header is written to the upstream request, not returned to the client, so a wire-level header proof requires an upstream request recorder. Use the AI Gateway controller E2E suite in the final phase for that boundary test.
 
-## 8. Deploy the custom AI Gateway Controller and Praxis ext-proc
+## 9. Deploy the custom AI Gateway Controller, TrustyAI operators, and Praxis ext-proc
 
-ODH owns the AI Gateway Controller and Praxis Deployments. This step updates the
-ODH Operator Subscription's supported `spec.config.env` image overrides, then waits
-for ODH, the AI Gateway Operator, the controller, and both Praxis Deployments to
-reconcile. It does not patch a CSV or an operator-managed Deployment directly.
+ODH owns the AI Gateway Controller, TrustyAI operators, and Praxis Deployments. This
+step updates the ODH Operator Subscription's supported `spec.config.env` image
+overrides, then waits for ODH, the AI Gateway Operator, both TrustyAI operators, the
+controller, and both Praxis Deployments to reconcile. It does not patch a CSV or an
+operator-managed Deployment directly.
 Run it only after the control-plane checks above pass:
 
 ```bash
 ./scripts/07-use-custom-aigateway-controller.sh
 ```
 
-## 9. Verify requests through the Gateway
+## 10. Verify requests through the Gateway
 
 ```bash
 ./scripts/08-verify-guardrail-requests.sh
@@ -311,13 +357,15 @@ Run it only after the control-plane checks above pass:
 
 This is the data-plane check. It sends both requests to the tenant Gateway's model route; it does not use a port-forward. The script first verifies that the Gateway HTTPS listener is programmed and its references resolve, then it sends a normal chat request and expects HTTP 200 with a completion. It sends the same request shape with the word `forbidden` and expects HTTP 403 from the input guardrail.
 
+This step requires the deployed Praxis configuration to contain an `ai_guardrails` filter that points to the NeMo `/v1/checks` endpoint. The AuthPolicy header and the direct NeMo check do not install that filter by themselves. If the filter is not configured, the model request can succeed without being checked. The direct NeMo endpoint intentionally reports blocked input as HTTP 200 with `status: blocked`; the Gateway test expects the Praxis integration to turn that result into a rejected request.
+
 The request uses `/v1/chat/completions` with `X-Gateway-Model-Name` set to the
 resolved MaaS model alias. This preserves the complete alias for subscription
 selection and matches the header-based HTTPRoute created for the model.
 
 The script obtains an OpenShift token with `oc whoami -t`. To use another credential, export `TOKEN` before running it. The current PoC uses `curl --insecure` because its Gateway certificate is not intended to be trusted by the local workstation.
 
-## 10. Run the AI Gateway Controller E2E suite
+## 11. Run the AI Gateway Controller E2E suite
 
 ```bash
 (
