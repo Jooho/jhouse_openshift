@@ -50,10 +50,9 @@ mkdir -p "${POC_SOURCES_DIR}"
 checkout_main \
     https://github.com/opendatahub-io/models-as-a-service.git \
     "${MAAS_REPO_PATH}"
-checkout_pull_request \
+checkout_main \
     https://github.com/trustyai-explainability/trustyai-service-operator.git \
-    "${TRUSTYAI_SERVICE_OPERATOR_REPO_PATH}" \
-    973
+    "${TRUSTYAI_SERVICE_OPERATOR_REPO_PATH}"
 checkout_pull_request \
     https://github.com/praxis-proxy/ai.git \
     "${PRAXIS_AI_REPO_PATH}" \

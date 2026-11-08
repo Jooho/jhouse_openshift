@@ -47,8 +47,6 @@ oc apply -f ./manifests/gateway.yaml
 ## Create an Example tenant
 
 ```
-
-
 export CLUSTER_DOMAIN=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}')
 export DESTINATION_CA=$(oc get configmap signing-cabundle -n openshift-service-ca -o go-template='{{ index .data "ca-bundle.crt" }}')
 export DESTINATION_CA_YAML=$(printf '%s\n' "$DESTINATION_CA" | sed 's/^/      /')
@@ -318,8 +316,8 @@ oc get tokenratelimitpolicy -n ${TENANT_NS}
 
 * Test Model Listing
 ```
-GATEWAY_HOST=$(oc get gateway ${TENANT_NAME} -n openshift-ingress -o jsonpath='{.spec.listeners[0].hostname}')
-TOKEN=$(oc whoami -t)
+export GATEWAY_HOST=$(oc get gateway ${TENANT_NAME} -n openshift-ingress -o jsonpath='{.spec.listeners[0].hostname}')
+export TOKEN=$(oc whoami -t)
 
 curl -sSk "https://${GATEWAY_HOST}/maas-api/v1/models" \
   -H "Authorization: Bearer ${TOKEN}" \
